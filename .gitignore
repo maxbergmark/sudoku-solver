@@ -23,3 +23,4 @@
 hs_err_pid*
 *.txt
 !hard_sudokus.txt
+!all_17_clue_sudokus.txt
