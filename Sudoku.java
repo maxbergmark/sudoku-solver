@@ -18,16 +18,14 @@ public class Sudoku {
 	private int[] unsolvedBoard;
 	private int[] color; 
 	private int[][] graph;
-	private int[][] neighbors;
-	private int[][] rowNeighbors;
-	private int[][] colNeighbors;
-	private int[][] boxNeighbors;
+	final private int[][] neighbors;
+	final private int[][] rowNeighbors;
+	final private int[][] colNeighbors;
+	final private int[][] boxNeighbors;
 	private static int[] clues;
-	private int[][] mask;
-	private int[][] placedMask;
-	// private int[][] rowMask;
-	// private int[][] colMask;
-	// private int[][] boxMask;
+	final private int[][] mask;
+	final private int[][] placedMask;
+
 	private int easySolved;
 	private int totEasy;
 	private int placedNumbers;
@@ -45,9 +43,10 @@ public class Sudoku {
 	public Sudoku() {
 		mask = new int[81][9];
 		placedMask = new int[81][64];
-		// rowMask = new int[81][9];
-		// colMask = new int[81][9];
-		// boxMask = new int[81][9];
+		neighbors = new int[81][20];
+		rowNeighbors = new int[81][8];
+		colNeighbors = new int[81][8];
+		boxNeighbors = new int[81][8];
 	}
  
 	/** Function to assign color **/
@@ -62,9 +61,6 @@ public class Sudoku {
 		for (int i = 0; i < 81; i++) {
 			for (int j = 0; j < 9; j++) {
 				mask[i][j] = 0;
-				// rowMask[i][j] = 0;
-				// rowMask[i][j] = 0;
-				// rowMask[i][j] = 0;
 			}
 		}
 		for (int i = 0; i < 81; i++) {
@@ -74,23 +70,10 @@ public class Sudoku {
 			}
 		}
 
-		// System.out.println("\n\nonePossible: " + onePossible(0) + "\n\n");
-		// if (true) {
-			// return;
-		// }
-
 		long t1 = 0,t2 = 0;
 		t1 = System.nanoTime();
-		// solutionFound = placeEasy(clue);
-		// System.out.println();
-		// display2(board, color);
-
-		// if (!solutionFound) {
 		solve(0);
-		// } else {
-			// easySolved++;
-		// }
-		// display2(board, color);
+
 		if (solutionFound && placedNumbers == 81) {
 			t2 = System.nanoTime();
 			totTime += t2-t1;
@@ -101,7 +84,7 @@ public class Sudoku {
 					printTime(t1, t2)
 				));
 				shouldPrint = false;
-				if (t2-t1 > 0*1000_000_000L) {
+				if (t2-t1 > 1*1000_000_000L) {
 					System.out.println();
 					display2(board, color);
 				}
@@ -124,46 +107,33 @@ public class Sudoku {
 		return totTime;
 	}
 
-	public int placeEasy(int vIndex) {
+	private int placeEasy(int vIndex) {
 		int easyIndex = 0;
 		int tempPlaced = 0, easyplaced = 0;
         while (placedNumbers - tempPlaced > 3 && placedNumbers < 68) {
-		// do {
 			tempPlaced = placedNumbers;
 			for (int tempv = 0; tempv < 81; tempv++) {
 				if (color[tempv] == -1) {
-					// int temp = 0;
-					// int tempcol = -1;
 					int c = onePossible(tempv);
 					if (c >= 0) {
-						// System.out.println("disabling " + tempv + " in step " + vIndex);
 						color[tempv] = c;
 						disable(tempv, c);
 						placedMask[vIndex][easyIndex++] = tempv;
-						// placedTempMask[easyIndex++] = tempv;
-						// easyplaced++;
 						placedNumbers++;
 					} else if (c == -2) {
 						oneCancel++;
-						// display(color);
-						// System.out.println(easyIndex + "\t" + Arrays.toString(placedTempMask));
 						for (int i = 0; i < easyIndex; i++) {
 							int tempv2 = placedMask[vIndex][i];
-							// int tempv2 = placedTempMask[i];
 							int c2 = color[tempv2];
-							// System.out.println(i + ": " + tempv2 + " " + c2 + " " + color[tempv2]);
 							color[tempv2] = -1;
 							enable(tempv2, c2);
 							placedNumbers--;
 						}
-						// System.out.println("cancel in " + v);
 						return -1;
 					}
 				}
 			}
-			// display(color);
-			// System.out.println(tempPlaced + "   " + easyplaced);
-		}// while(tempPlaced < easyplaced);
+		}
 		return easyIndex;
 	}
 
@@ -184,7 +154,7 @@ public class Sudoku {
 		return (t2-t1) + unit;
 	}
 
-	public void solve(int v) {
+	private void solve(int v) {
 
 		while (v < 81 && color[v] >= 0) {
 			v++;
@@ -194,61 +164,14 @@ public class Sudoku {
 			solutionFound = true;
 			return;
 		}
-		// int[] placedTempMask = new int[64];
+
 		int vIndex = v;
 		int easyIndex = placeEasy(vIndex);
-		// int easyIndex = 0;
 
 		if (easyIndex == -1) {
 			return;
 		}
 
-		long t0 = System.nanoTime();
-/*
-		int tempPlaced = 0;
-        while (placedNumbers - tempPlaced > 3 && placedNumbers < 68) {
-		// do {
-			tempPlaced = placedNumbers;
-			for (int tempv = 0; tempv < 81; tempv++) {
-				if (color[tempv] == -1) {
-					// int temp = 0;
-					// int tempcol = -1;
-					int c = onePossible(tempv);
-					if (c >= 0) {
-						// System.out.println("disabling " + tempv + " in step " + vIndex);
-						color[tempv] = c;
-						disable(tempv, c);
-						placedMask[vIndex][easyIndex++] = tempv;
-						// placedTempMask[easyIndex++] = tempv;
-						// easyplaced++;
-						placedNumbers++;
-					} else if (c == -2) {
-						oneCancel++;
-						// display(color);
-						// System.out.println(easyIndex + "\t" + Arrays.toString(placedTempMask));
-						for (int i = 0; i < easyIndex; i++) {
-							int tempv2 = placedMask[vIndex][i];
-							// int tempv2 = placedTempMask[i];
-							int c2 = color[tempv2];
-							// System.out.println(i + ": " + tempv2 + " " + c2 + " " + color[tempv2]);
-							color[tempv2] = -1;
-							enable(tempv2, c2);
-							placedNumbers--;
-						}
-						// System.out.println("cancel in " + v);
-						return;
-					}
-				}
-			}
-			// display(color);
-			// System.out.println(tempPlaced + "   " + easyplaced);
-		}// while(tempPlaced < easyplaced);
-*/
-		// if (easyplaced > 0) {
-			// System.out.println(easyplaced + " placed easily");
-		// }
-		long t1 = System.nanoTime();
-		// System.out.println("time taken: " + (t1-t0));
 
 		while (v < 81 && color[v] >= 0) {
 			v++;
@@ -259,24 +182,12 @@ public class Sudoku {
 			solutionFound = true;
 			return;
 		}
-		if (v == V) {
-			// solutionFound = true;
-			// System.out.println("solution found!");
-			// return;
-		}
-		// totEasy += easyplaced;
-		// return clue + easyplaced == 81;
 
 		for (int c = 0; c < numOfColors;c++) {
 			if (isPossible(v, c)) {
-				// if (v == 0) {
-					// display2(unsolvedBoard, color);
-					// System.out.println("trying " + (c+1));	
-				// }
 				color[v] = c;
 				disable(v, c);
 				placedNumbers++;
-				// System.out.println("going to " + (v+1));
 				solve(v + 1); 
 				if (solutionFound) {
 					return;
@@ -286,18 +197,14 @@ public class Sudoku {
 				placedNumbers--;
 			}
 		}
-		// System.out.println(easyIndex + "\t" + Arrays.toString(placedMask[vIndex]));
-		// display(color);
+
 		for (int i = 0; i < easyIndex; i++) {
 			int tempv = placedMask[vIndex][i];
-			// int tempv = placedTempMask[i];
 			int c = color[tempv];
-			// System.out.println(tempv + " " + c);
 			color[tempv] = -1;
 			enable(tempv, c);
 			placedNumbers--;
 		}
-		// System.out.println("end of " + v);
 	}
 
 
@@ -543,10 +450,6 @@ public class Sudoku {
 
 	public void connect() {
 		graph = new int[81][81];
-		neighbors = new int[81][20];
-		rowNeighbors = new int[81][8];
-		colNeighbors = new int[81][8];
-		boxNeighbors = new int[81][8];
 		for (int i = 0; i < 81; i++) {
 			for (int j = 0; j < 20; j++) {
 				neighbors[i][j] = -1;
