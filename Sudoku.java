@@ -110,7 +110,7 @@ public class Sudoku {
 	private int placeEasy(int vIndex) {
 		int easyIndex = 0;
 		int tempPlaced = 0, easyplaced = 0;
-        while (placedNumbers - tempPlaced > 3 && placedNumbers < 68) {
+		while (placedNumbers - tempPlaced > 3 && placedNumbers < 68) {
 			tempPlaced = placedNumbers;
 			for (int tempv = 0; tempv < 81; tempv++) {
 				if (color[tempv] == -1) {
@@ -320,8 +320,8 @@ public class Sudoku {
 	}
 
 	private void disable(int v, int c) {
+		disables++;
 		for (int i : neighbors[v]) {
-			disables++;
 			mask[i][c]++;
 		}
 		for (int i = 0; i < 9; i++) {
@@ -339,8 +339,8 @@ public class Sudoku {
 	}
 
 	private void enable(int v, int c) {
+		enables++;
 		for (int i : neighbors[v]) {
-			enables++;
 			mask[i][c]--;
 		}
 		for (int i = 0; i < 9; i++) {
@@ -609,7 +609,7 @@ public class Sudoku {
 		}
 		p.close();
 		System.out.println();
-		System.out.println(String.format("%d\n%d\n%d\noneCount: %d\noneSuccess: %d\noneCancel: %d", 
+		System.out.println(String.format("disables: %d\nenables: %d\nchecks: %d\noneCount: %d\noneSuccess: %d\noneCancel: %d", 
 			gc.disables, gc.enables, gc.checks, gc.oneCount, gc.oneSuccess, gc.oneCancel));
 		long t2 = System.nanoTime();
 		System.out.println("Total time (including prints): " 
