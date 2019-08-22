@@ -24,6 +24,7 @@ public class Sudoku {
 	final private int[][] colNeighbors;
 	final private int[][] boxNeighbors;
 	final private int[][] cells;
+	final private int[] invertCells;
 
 	private static int[] clues;
 	final private int[][] mask;
@@ -36,6 +37,7 @@ public class Sudoku {
 	final private int[][] sectionMask;
 
 	private int easySolved;
+	private boolean isEasy;
 	private int totEasy;
 	private int placedNumbers;
 	public long totTime = 0;
@@ -58,8 +60,8 @@ public class Sudoku {
 		placedMask = new int[64][64];
 		lineMask = new int[64][1];
 		lineMask2 = new boolean[64][81][9];
-		sectionCounters = new int[27][9];
-		sectionMask = new int[27][9];
+		sectionCounters = new int[9][27];
+		sectionMask = new int[9][27];
 		lineCounters = new int[64];
 		graph = new int[81][81];
 		neighbors = new int[81][20];
@@ -77,6 +79,16 @@ public class Sudoku {
 							 {54,55,56,63,64,65,72,73,74},
 							 {57,58,59,66,67,68,75,76,77},
 							 {60,61,62,69,70,71,78,79,80}};
+
+		invertCells = new int[] {0, 0, 0, 1, 1, 1, 2, 2, 2,
+								 0, 0, 0, 1, 1, 1, 2, 2, 2,
+								 0, 0, 0, 1, 1, 1, 2, 2, 2,
+								 3, 3, 3, 4, 4, 4, 5, 5, 5,
+								 3, 3, 3, 4, 4, 4, 5, 5, 5,
+								 3, 3, 3, 4, 4, 4, 5, 5, 5,
+								 6, 6, 6, 7, 7, 7, 8, 8, 8,
+								 6, 6, 6, 7, 7, 7, 8, 8, 8,
+								 6, 6, 6, 7, 7, 7, 8, 8, 8};
 	}
  
 	public void solveSudoku(int[] board, int clue) {
@@ -88,6 +100,7 @@ public class Sudoku {
 
 		placedNumbers = 0;
 		solutionFound = false;
+		isEasy = true;
 
 		for (int[] i : mask) {
 			Arrays.fill(i, 0);
@@ -109,9 +122,10 @@ public class Sudoku {
 		}
 
 		solve(0, 0);
+		t2 = System.nanoTime();
+		easySolved += isEasy ? 1 : 0;
 
 		if (solutionFound && placedNumbers == 81) {
-			t2 = System.nanoTime();
 			totTime += t2-t1;
 			if (shouldPrint || t2-t1 > 5*1_000_000_000L) {
 				System.out.print(String.format(
@@ -170,7 +184,11 @@ public class Sudoku {
 			v++;
 		}
 		for (int c = 0; c < 9; c++) {
-			if (isPossible(v, c)) {
+			// if (isPossible(v, c)) {
+			if (mask[v][c] == 0) {
+				isEasy = false;
+				// System.out.println("backtracking");
+				// display(color);
 				put(v, c);
 				placedNumbers++;
 				solve(v + 1, vIndex + 1); 
@@ -303,56 +321,67 @@ public class Sudoku {
 				Arrays.fill(i, 0);
 			}
 
-			for (int v = 0; v < 81; v++) {
-				for (int c = 0; c < 9; c++) {
-					if (isPossible(v, c)) {
+			for (int c = 0; c < 9; c++) {
+				for (int v = 0; v < 81; v++) {
+					// if (color[v] == c) {
+						// int cell = 3 * (v / 27) + ((v / 3) % 3);
+						// sectionCounters[c][v / 9] = 9;
+						// sectionCounters[c][9 + (v % 9)] = 9;
+						// sectionCounters[c][18 + cell] = 9;						
+					// if (isPossible(v, c)) {
+					if (mask[v][c] == 0) {
 						int cell = 3 * (v / 27) + ((v / 3) % 3);
-						sectionCounters[v / 9][c]++;
-						sectionCounters[9 + (v % 9)][c]++;
-						sectionCounters[18 + cell][c]++;
-						sectionMask[v / 9][c] = v;
-						sectionMask[9 + (v % 9)][c] = v;
-						sectionMask[18 + cell][c] = v;
+						// int cell = invertCells[v];
+						sectionCounters[c][v / 9]++;
+						sectionCounters[c][9 + (v % 9)]++;
+						sectionCounters[c][18 + cell]++;
+						sectionMask[c][v / 9] = v;
+						sectionMask[c][9 + (v % 9)] = v;
+						sectionMask[c][18 + cell] = v;
 					}
 				}
-			}
 
-			for (int c = 0; c < 9; c++) {
+				int v;
 
 				for (int i = 0; i < 9; i++) {
-					if (sectionCounters[i][c] == 1) {
-						int v = sectionMask[i][c];
-						if (isPossible(v, c)) {
-							oneSuccess++;
-							put(v, c);
-							placedMask[vIndex][easyIndex++] = v;
-							placedNumbers++;
-						}
+					if (sectionCounters[c][i] == 1) {
+						v = sectionMask[c][i];
+						// if (isPossible(v, c)) {
+						int cell = 3 * (v / 27) + ((v / 3) % 3);
+						// oneSuccess++;
+						put(v, c);
+						placedMask[vIndex][easyIndex++] = v;
+						placedNumbers++;
+						sectionCounters[c][9 + (v%9)]++;
+						sectionCounters[c][18 + cell]++;
+						// }
 					}
 				}
 
 				for (int i = 9; i < 18; i++) {
-					if (sectionCounters[i][c] == 1) {
-						int v = sectionMask[i][c];
-						if (isPossible(v, c)) {
-							oneSuccess++;
-							put(v, c);
-							placedMask[vIndex][easyIndex++] = v;
-							placedNumbers++;
-						}
+					if (sectionCounters[c][i] == 1) {
+						v = sectionMask[c][i];
+						// if (isPossible(v, c)) {
+						int cell = 3 * (v / 27) + ((v / 3) % 3);
+						// oneSuccess++;
+						put(v, c);
+						placedMask[vIndex][easyIndex++] = v;
+						placedNumbers++;
+						sectionCounters[c][18 + cell]++;
+						// }
 					}
 				}
  
 
 				for (int i = 18; i < 27; i++) {
-					if (sectionCounters[i][c] == 1) {
-						int v = sectionMask[i][c];
-						if (isPossible(v, c)) {
-							oneSuccess++;
-							put(v, c);
-							placedMask[vIndex][easyIndex++] = v;
-							placedNumbers++;
-						}
+					if (sectionCounters[c][i] == 1) {
+						v = sectionMask[c][i];
+						// if (isPossible(v, c)) {
+						// oneSuccess++;
+						put(v, c);
+						placedMask[vIndex][easyIndex++] = v;
+						placedNumbers++;
+						// }
 					}
 				}
 
@@ -362,21 +391,11 @@ public class Sudoku {
 				if (color[tempv] == -1) {
 					int c = onePossible(tempv);
 					if (c >= 0) {
-						oneSuccess++;
+						// oneSuccess++;
 						put(tempv, c);
 						placedMask[vIndex][easyIndex++] = tempv;
 						placedNumbers++;
 					}
-					// } else if (c == -2) {
-						// oneCancel++;
-						// for (int i = 0; i < easyIndex; i++) {
-							// int tempv2 = placedMask[vIndex][i];
-							// int c2 = color[tempv2];
-							// unput(tempv2, c2);
-							// placedNumbers--;
-						// }
-						// return -1;
-					// }
 				}
 			}
 		}
@@ -390,7 +409,6 @@ public class Sudoku {
 		int x = 0;
 		int y = 0;
 		for (int c = 8; c >= 0; c--) {
-		// for (int c = 0; c < 9; c++) {
 			x <<= 1;
 			x += mask[v][c] == 0 ? 1 : 0;
 			y += mask[v][c] == 0 ? 1 : 0;
@@ -783,7 +801,7 @@ public class Sudoku {
 	}
 
 	private boolean isPossible(int v, int c) {
-		checks++;
+		// checks++;
 		return mask[v][c] == 0;
 	}
 
@@ -826,12 +844,9 @@ public class Sudoku {
 
 	private void put(int v, int c) {
 		color[v] = c;
-		disables++;
+		// disables++;
 		for (int i : neighbors[v]) {
 			mask[i][c]++;
-			// if (i == 58) {
-				// System.out.println("putting " + (c+1) + " from " + v + String.format(" (%d, %d) ", (v/9)+1, (v%9)+1) + Arrays.toString(mask[58]));
-			// }
 		}
 		for (int i = 0; i < 9; i++) {
 			mask[v][i]++;
@@ -839,23 +854,14 @@ public class Sudoku {
 	}
 
 	private void disable(int v, int c) {
-		// if (v == 58) {
-			// System.out.println("disabling " + (c+1));
-		// }
 		mask[v][c]++;
-		// for (int i : neighbors[v]) {
-			// mask[i][c]++;
-		// }
 	}
 
 	private void unput(int v, int c) {
 		color[v] = -1;
-		enables++;
+		// enables++;
 		for (int i : neighbors[v]) {
 			mask[i][c]--;
-			// if (i == 58) {
-				// System.out.println("unputting " + (c+1) + " from " + v + String.format(" (%d, %d) ", (v/9)+1, (v%9)+1) + Arrays.toString(mask[58]));
-			// }
 		}
 		for (int i = 0; i < 9; i++) {
 			mask[v][i]--;
@@ -864,9 +870,6 @@ public class Sudoku {
 
 	private void enable(int v, int c) {
 		mask[v][c]--;
-		// for (int i : neighbors[v]) {
-			// mask[i][c]--;
-		// }
 	}
 
 	public String getString(int[] board) {
@@ -1082,7 +1085,7 @@ public class Sudoku {
 		long tinp = System.nanoTime();
 		gc.connect();
 		long t1 = System.nanoTime();
-		// p.println(boards.length);
+		p.println(boards.length);
 /*
 		gc.solveSudoku(boards[0], gc.clues[0]);
 		gc.totTime = 0;
@@ -1101,7 +1104,7 @@ public class Sudoku {
 					"\r(%7d/%7d) ", i+1, boards.length));
 			}
 			gc.solveSudoku(boards[i], gc.clues[i]);
-			// p.println(gc.getSolution());
+			p.println(gc.getSolution());
 			// break;
 			// if (i == 4) {
 				// break;
@@ -1109,10 +1112,10 @@ public class Sudoku {
 		}
 		p.close();
 		System.out.println();
-		System.out.println(String.format("disables: %d\nenables: %d\n" 
-			+ "checks: %d\noneCount: %d\noneSuccess: %d\noneCancel: %d", 
-			gc.disables, gc.enables, gc.checks, 
-			gc.oneCount, gc.oneSuccess, gc.oneCancel));
+		// System.out.println(String.format("disables: %d\nenables: %d\n" 
+			// + "checks: %d\noneCount: %d\noneSuccess: %d\noneCancel: %d", 
+			// gc.disables, gc.enables, gc.checks, 
+			// gc.oneCount, gc.oneSuccess, gc.oneCancel));
 
 		long t2 = System.nanoTime();
 		System.out.println("Total time (including prints): " 
