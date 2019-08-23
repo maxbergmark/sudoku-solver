@@ -23,5 +23,6 @@
 hs_err_pid*
 *.txt
 !hard_sudokus.txt
+!hard_sudokus_solved.txt
 !all_17_clue_sudokus.txt
 SudokuSolver.java
