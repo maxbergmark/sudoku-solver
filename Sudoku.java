@@ -51,8 +51,8 @@ public class Sudoku {
 	public long lastPrint;
 	private boolean shouldPrint;
 	private boolean newMethod = true;
-	private boolean newSinglePlacement = true;
-	private boolean newNeighborPlacement = true;
+	private boolean newSinglePlacement = false;
+	private boolean newNeighborPlacement = false;
 
 	public Sudoku() {
 		mask = new int[81][9];
@@ -254,11 +254,11 @@ public class Sudoku {
 				}
 			}
 
-			if (iter == 4 && placedNumbers < 35) {
+			if (iter == 4-4 && placedNumbers < 35) {
 				// System.out.println("checking triples");
 				checkNakedTriples(vIndex);
 			}
-			if (placedNumbers < 45) {
+			if (placedNumbers < 45*0) {
 				// System.out.println("advanced");
 				checkNakedPairs(vIndex);
 				identifyLines(vIndex);
