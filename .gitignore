@@ -26,3 +26,6 @@ hs_err_pid*
 !hard_sudokus_solved.txt
 !all_17_clue_sudokus.txt
 SudokuSolver.java
+SudokuSolver2.java
+profiling/
+ppcg/

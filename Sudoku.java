@@ -51,8 +51,8 @@ public class Sudoku {
 	public long lastPrint;
 	private boolean shouldPrint;
 	private boolean newMethod = true;
-	private boolean newSinglePlacement = false;
-	private boolean newNeighborPlacement = false;
+	private boolean newSinglePlacement = true;
+	private boolean newNeighborPlacement = true;
 
 	public Sudoku() {
 		mask = new int[81][9];
@@ -240,13 +240,13 @@ public class Sudoku {
 			}
 
 			tempPlaced = 0;
-			while (placedNumbers < 55 && placedNumbers > tempPlaced + 1) {
+			while (placedNumbers < 55*1 && placedNumbers > tempPlaced + 1) {
 				tempPlaced = placedNumbers;
 				easyIndex = placeNoNeighborChoices(vIndex, easyIndex);
 			}
 
 			tempPlaced = 0;
-			while (placedNumbers < 65 && placedNumbers > tempPlaced + 1) {
+			while (placedNumbers < 65*1 && placedNumbers > tempPlaced + 1) {
 				tempPlaced = placedNumbers;
 				easyIndex = placeSingleChoices(vIndex, easyIndex);
 				if (easyIndex < 0) {
@@ -254,11 +254,11 @@ public class Sudoku {
 				}
 			}
 
-			if (iter == 4-4 && placedNumbers < 35) {
+			if (iter == 4 && placedNumbers < 35) {
 				// System.out.println("checking triples");
 				checkNakedTriples(vIndex);
 			}
-			if (placedNumbers < 45*0) {
+			if (placedNumbers < 45) {
 				// System.out.println("advanced");
 				checkNakedPairs(vIndex);
 				identifyLines(vIndex);
@@ -270,9 +270,10 @@ public class Sudoku {
 
 	private int placeSingleChoices(int vIndex, int easyIndex) {
 		if (newSinglePlacement) {
-			generateFormattedMasks();
+			// generateFormattedMasks();
 			for (int tempv = 0; tempv < 81; tempv++) {
-				int possibilities = formattedMask[tempv];
+				// int possibilities = formattedMask[tempv];
+				int possibilities = getFormattedMask(tempv);
 				if ((possibilities & 0xffff) == 1) {
 					possibilities >>= 16;
 					int c = 0;
@@ -284,6 +285,7 @@ public class Sudoku {
 					placedMask[vIndex][easyIndex++] = tempv;
 					placedNumbers++;				
 				} else if (possibilities == 0 && color[tempv] == -1) {
+					// System.out.println("reached the end");
 					for (int i = 0; i < easyIndex; i++) {
 						int tempv2 = placedMask[vIndex][i];
 						int c2 = color[tempv2];
@@ -308,6 +310,8 @@ public class Sudoku {
 						put(tempv, tempcol);
 						placedMask[vIndex][easyIndex++] = tempv;
 						placedNumbers++;
+					} else if (temp == 0) {
+						// System.out.println("reached the end");
 					}
 				}
 			}
@@ -320,6 +324,8 @@ public class Sudoku {
 			for (int[] i : sectionCounters) {
 				Arrays.fill(i, 0);
 			}
+			// System.out.println("\n\n\n");
+			// display(color);
 
 			for (int c = 0; c < 9; c++) {
 				for (int v = 0; v < 81; v++) {
@@ -346,29 +352,33 @@ public class Sudoku {
 				for (int i = 0; i < 9; i++) {
 					if (sectionCounters[c][i] == 1) {
 						v = sectionMask[c][i];
-						// if (isPossible(v, c)) {
-						int cell = 3 * (v / 27) + ((v / 3) % 3);
-						// oneSuccess++;
-						put(v, c);
-						placedMask[vIndex][easyIndex++] = v;
-						placedNumbers++;
-						sectionCounters[c][9 + (v%9)]++;
-						sectionCounters[c][18 + cell]++;
-						// }
+						if (isPossible(v, c)) {
+							// oneSuccess++;
+							put(v, c);
+							placedMask[vIndex][easyIndex++] = v;
+							placedNumbers++;
+							int cell = 3 * (v / 27) + ((v / 3) % 3);
+							sectionCounters[c][9 + (v%9)] = 9;
+							sectionCounters[c][18 + cell] = 9;
+							// System.out.println("put " + (c+1) + " on " + v
+								// + String.format(" (%d, %d) row", (v/9)+1, (v%9) + 1));
+						}
 					}
 				}
 
 				for (int i = 9; i < 18; i++) {
 					if (sectionCounters[c][i] == 1) {
 						v = sectionMask[c][i];
-						// if (isPossible(v, c)) {
-						int cell = 3 * (v / 27) + ((v / 3) % 3);
-						// oneSuccess++;
-						put(v, c);
-						placedMask[vIndex][easyIndex++] = v;
-						placedNumbers++;
-						sectionCounters[c][18 + cell]++;
-						// }
+						if (isPossible(v, c)) {
+							// oneSuccess++;
+							put(v, c);
+							placedMask[vIndex][easyIndex++] = v;
+							int cell = 3 * (v / 27) + ((v / 3) % 3);
+							placedNumbers++;
+							// System.out.println("put " + (c+1) + " on " + v
+								// + String.format(" (%d, %d) col", (v/9)+1, (v%9) + 1));
+							sectionCounters[c][18 + cell]++;
+						}
 					}
 				}
  
@@ -376,12 +386,12 @@ public class Sudoku {
 				for (int i = 18; i < 27; i++) {
 					if (sectionCounters[c][i] == 1) {
 						v = sectionMask[c][i];
-						// if (isPossible(v, c)) {
-						// oneSuccess++;
-						put(v, c);
-						placedMask[vIndex][easyIndex++] = v;
-						placedNumbers++;
-						// }
+						if (isPossible(v, c)) {
+							// oneSuccess++;
+							put(v, c);
+							placedMask[vIndex][easyIndex++] = v;
+							placedNumbers++;
+						}
 					}
 				}
 
@@ -1106,7 +1116,7 @@ public class Sudoku {
 			gc.solveSudoku(boards[i], gc.clues[i]);
 			p.println(gc.getSolution());
 			// break;
-			// if (i == 4) {
+			// if (i == 51) {
 				// break;
 			// }
 		}
