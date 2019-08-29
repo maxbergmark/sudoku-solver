@@ -927,38 +927,7 @@ public class Sudoku {
 		}
 	}
 
-	public static int[][] getInput() {
-		Scanner scan = new Scanner(System.in);
-		int n = scan.nextInt();
-		int[][] board = new int[n][81];
-		for (int k = 0; k < n; k++) {
-			for (int i = 0; i < 81; i++) {
-				int x = scan.nextInt()-1;
-				board[k][i] = x;
-			}
-		}
-		return board;
-	}
-
-	public static int[][] getInput2() {
-		Scanner scan = new Scanner(System.in);
-		int n = scan.nextInt();
-		clues = new int[n];
-		int[][] board = new int[n][81];
-		for (int k = 0; k < n; k++) {
-			String line = scan.next();
-			int clue = 0;
-			for (int i = 0; i < 81; i++) {
-				int x = Character.getNumericValue(line.charAt(i))-1;
-				if (x != -1) {clue++;}
-				board[k][i] = x;
-			}
-			clues[k] = clue;
-		}
-		return board;
-	}
-
-	public static int[][] getInput3(String filename) {
+	public static int[][] getInput(String filename) {
 		int[][] boards;
 		try (BufferedInputStream in = new BufferedInputStream(
 			new FileInputStream(filename))) {
@@ -1008,8 +977,12 @@ public class Sudoku {
 		} catch (Exception e) {
 			return;
 		}
+		if (args.length != 1) {
+			System.out.println("Usage: java Sudoku <input_file>");
+			return;
+		}
 		long t0 = System.nanoTime();
-		int[][] boards = gc.getInput3(args[0]);
+		int[][] boards = gc.getInput(args[0]);
 		long tinp = System.nanoTime();
 		gc.connect();
 		long t1 = System.nanoTime();
