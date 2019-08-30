@@ -23,7 +23,7 @@ void process_batch(std::vector<std::vector<signed char>> &boards,
 		int tid = omp_get_thread_num();
 		solvers[tid].solveSudoku(boards[i]);
 		res[i] = solvers[tid].getSolution();
-		if (i % 100000 == 0) {
+		if (i % 10000 == 0) {
 			fprintf(stderr, "Completed sudoku %d on %d\n", i, world_rank);
 		}
 	}
