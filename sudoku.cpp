@@ -32,7 +32,7 @@ Sudoku::Sudoku() {
 	guesses = 0;
 }
 
-void Sudoku::solveSudoku(std::vector<char> &board) {
+void Sudoku::solveSudoku(std::vector<signed char> &board) {
 	unsolvedBoard = board;
 	solvedBoard = board;
 
@@ -710,6 +710,7 @@ inline bool Sudoku::isPossible(int v, int c) {
 inline void Sudoku::put(int v, int c) {
 	solvedBoard[v] = c;
 	for (int i : neighbors[v]) {
+		printf("%d, %d, %d\n", v, c, i);
 		mask[i][c]++;
 	}
 	for (int i = 0; i < 9; i++) {
@@ -736,7 +737,7 @@ inline void Sudoku::enable(int v, int c) {
 }
 
 
-void Sudoku::display(std::vector<char> &board) {
+void Sudoku::display(std::vector<signed char> &board) {
 
 	for (int i = 0; i < 9; i++) {
 		if (i % 3 == 0) {
@@ -759,7 +760,7 @@ void Sudoku::display(std::vector<char> &board) {
 	printf("+-----+-----+-----+\n");
 }
 
-void Sudoku::display2(std::vector<char> &board, std::vector<char> &solved) {
+void Sudoku::display2(std::vector<signed char> &board, std::vector<signed char> &solved) {
 
 	for (int i = 0; i < 9; i++) {
 		if (i % 3 == 0) {
@@ -847,14 +848,14 @@ void Sudoku::connect() {
 	}
 }
 
-std::vector<std::vector<char>> Sudoku::getInput(std::string filename) {
+std::vector<std::vector<signed char>> Sudoku::getInput(std::string filename) {
 	char buffer[82];
 	std::ifstream in(filename);
 
 	std::string first_line;
 	getline(in, first_line);
 	int num_lines = std::stoi(first_line);
-	std::vector<std::vector<char>> boards(num_lines);
+	std::vector<std::vector<signed char>> boards(num_lines);
 	for (int i = 0; i < num_lines; i++) {
 		boards[i].resize(81);
 		in.read(buffer, 82);
@@ -870,19 +871,19 @@ std::vector<std::vector<char>> Sudoku::getInput(std::string filename) {
 int main(int argc, char **argv) {
 	omp_set_num_threads(8);
 	std::vector<Sudoku> solvers(8);
-	std::vector<std::vector<char>> boards = Sudoku::getInput(argv[1]);
+	std::vector<std::vector<signed char>> boards = Sudoku::getInput(argv[1]);
 	for (Sudoku &solver : solvers) {
 		solver.connect();
 	}
 	std::vector<std::string> res;
 	res.resize(boards.size());
 	std::cout << boards.size() << std::endl;
-	#pragma omp parallel for schedule(static)
+	// #pragma omp parallel for schedule(static)
 	for (int i = 0; i < boards.size(); i++) {
 		int tid = omp_get_thread_num();
 		solvers[tid].solveSudoku(boards[i]);
 		res[i] = solvers[tid].getSolution();
-		// break;
+		break;
 		// if (i == 1000) {
 			// break;
 		// }
@@ -894,6 +895,6 @@ int main(int argc, char **argv) {
 			(double) solver.guesses / solver.totalSolved);
 	}
 	for (std::string s : res) {
-		std::cout << s << std::endl;
+		// std::cout << s << std::endl;
 	}
 }

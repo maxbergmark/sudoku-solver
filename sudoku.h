@@ -3,8 +3,8 @@
 
 class Sudoku {
 private:
-	std::vector<char> unsolvedBoard;
-	std::vector<char> solvedBoard; 
+	std::vector<signed char> unsolvedBoard;
+	std::vector<signed char> solvedBoard; 
 	std::vector<std::vector<char>> neighbors;
 	std::vector<std::vector<char>> cells;
 	std::vector<std::vector<char>> mask;
@@ -58,13 +58,13 @@ public:
 	int totalSolved;
 	long guesses;
 	Sudoku();
-	void solveSudoku(std::vector<char> &board);
-	std::string getString(std::vector<char> &board);
+	void solveSudoku(std::vector<signed char> &board);
+	std::string getString(std::vector<signed char> &board);
 	long getTime();
-	void display(std::vector<char> &board);
-	void display2(std::vector<char> &board, std::vector<char> &solved);
+	void display(std::vector<signed char> &board);
+	void display2(std::vector<signed char> &board, std::vector<signed char> &solved);
 	void connect();
 	std::string getSolution();
 	static std::string printTime(long t1, long t2);
-	static std::vector<std::vector<char>> getInput(std::string filename);
+	static std::vector<std::vector<signed char>> getInput(std::string filename);
 };
