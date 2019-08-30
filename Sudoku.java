@@ -1,8 +1,5 @@
-import java.util.Scanner;
-import java.util.HashSet;
 import java.util.HashMap;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Arrays;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -10,15 +7,13 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
-import java.io.DataInputStream;
-import java.io.Console;
 import java.io.File;
 import java.io.PrintWriter;
  
 public class Sudoku {	
 
 	final private int[] unsolvedBoard;
-	final private int[] color; 
+	final private int[] solvedBoard; 
 	final private int[][] neighbors;
 	final private int[][] cells;
 
@@ -26,8 +21,7 @@ public class Sudoku {
 	final private int[][] mask;
 	final private int[] formattedMask;
 	final private int[][] placedMask;
-	final private int[][] lineMask;
-	final private boolean[][][] lineMask2;
+	final private boolean[][][] lineMask;
 	final private int[] lineCounters;
 	final private int[][] sectionCounters;
 	final private int[][] sectionMask;
@@ -37,14 +31,6 @@ public class Sudoku {
 	private int totEasy;
 	private int placedNumbers;
 	public long totTime = 0;
-	public long enables = 0;
-	public long disables = 0;
-	public long puts = 0;
-	public long unputs = 0;
-	public long checks = 0;
-	public long oneCount = 0;
-	public long oneSuccess = 0;
-	public long oneCancel = 0;
 	private boolean solutionFound;
 	public long lastPrint;
 	private boolean shouldPrint;
@@ -54,14 +40,13 @@ public class Sudoku {
 		mask = new int[81][9];
 		formattedMask = new int[81];
 		placedMask = new int[64][64];
-		lineMask = new int[64][1];
-		lineMask2 = new boolean[64][81][9];
+		lineMask = new boolean[64][81][9];
 		sectionCounters = new int[9][27];
 		sectionMask = new int[9][27];
 		lineCounters = new int[64];
 		neighbors = new int[81][20];
 		unsolvedBoard = new int[81];
-		color = new int[81];
+		solvedBoard = new int[81];
 		cells = new int[][] {{0 ,1 ,2 ,9 ,10,11,18,19,20},
 							 {3 ,4 ,5 ,12,13,14,21,22,23},
 							 {6 ,7 ,8 ,15,16,17,24,25,26},
@@ -78,7 +63,7 @@ public class Sudoku {
 		long t1 = 0,t2 = 0;
 		t1 = System.nanoTime();
 		System.arraycopy(board, 0, unsolvedBoard, 0, 81);
-		System.arraycopy(board, 0, color, 0, 81);
+		System.arraycopy(board, 0, solvedBoard, 0, 81);
 
 		placedNumbers = 0;
 		solutionFound = false;
@@ -89,15 +74,15 @@ public class Sudoku {
 			Arrays.fill(i, 0);
 		}
 		
-		for (boolean[][] i : lineMask2) {
+		for (boolean[][] i : lineMask) {
 			for (boolean[] j : i) {
 				Arrays.fill(j, false);
 			}
 		}
 
 		for (int i = 0; i < 81; i++) {
-			if (color[i] != -1) {
-				put(i, color[i]);
+			if (solvedBoard[i] != -1) {
+				put(i, solvedBoard[i]);
 				placedNumbers++;
 			}
 		}
@@ -117,12 +102,12 @@ public class Sudoku {
 				shouldPrint = false;
 				if (t2-t1 > 1*1000_000_000L) {
 					System.out.println();
-					display2(board, color);
+					display2(board, solvedBoard);
 				}
 			}
 		} else {
 			System.out.println("No solution");
-			display2(board, color);
+			display2(unsolvedBoard, solvedBoard);
 			return -1;
 		}
 		return t2 - t1;
@@ -133,18 +118,9 @@ public class Sudoku {
 		lineCounters[vIndex] = 0;
 		int easyIndex = placeEasy(vIndex);
 
-		if (easyIndex == -1 || isImpossible) {
-			if (lineCounters[vIndex] > 0) {
-				for (int i = 0; i < 81; i++) {
-					for (int c = 0; c < 9; c++) {
-						if (lineMask2[vIndex][i][c]) {
-							enable(i, c);
-							lineMask2[vIndex][i][c] = false;
-						}
-					}
-				}
-			}
-			isImpossible = false;
+		if (isImpossible) {
+			resetEasy(vIndex, easyIndex);
+			resetLineMask(vIndex);
 			return;
 		}
 
@@ -152,50 +128,67 @@ public class Sudoku {
 			solutionFound = true;
 			return;
 		}
-
-		while (v < 81 && color[v] >= 0) {
-			v++;
-		}
-		// generateFormattedMasks();
-		// int minOptions = 9;
-		// for (int i = 0; i < 81; i++) {
-			// int options = formattedMask[i] & 0xffff;
-			// if (options > 0 && options < minOptions) {
-				// minOptions = options;
-				// v = i;
-			// }
+		// if (true) {
+			// return;
 		// }
 
-		for (int c = 0; c < 9; c++) {
-			if (isPossible(v, c)) {
-				isEasy = false;
-				put(v, c);
-				placedNumbers++;
-				solve(v + 1, vIndex + 1); 
-				if (solutionFound) {
-					return;
-				}
-				unput(v, c);
-				placedNumbers--;
+		// either get the next empty cell
+		// while (v < 81 && solvedBoard[v] >= 0) {
+			// v++;
+		// }
+		// or get the cell with the fewest options
+		generateFormattedMasks();
+		int minOptions = 9;
+		for (int i = 0; i < 81; i++) {
+			int options = formattedMask[i] & 0xffff;
+			if (options > 0 && options < minOptions) {
+				minOptions = options;
+				v = i;
+			}
+			if (options == 0 && solvedBoard[i] == -1) {
+				isImpossible = true;
 			}
 		}
+		if (!isImpossible) {
+			for (int c = 0; c < 9; c++) {
+				if (isPossible(v, c)) {
+					isEasy = false;
+					put(v, c);
+					placedNumbers++;
+					solve(v + 1, vIndex + 1); 
+					if (solutionFound) {
+						return;
+					}
+					unput(v, c);
+					placedNumbers--;
+				}
+			}
+		}
+		resetEasy(vIndex, easyIndex);
+		resetLineMask(vIndex);
+	}
 
+	final private void resetEasy(int vIndex, int easyIndex) {
 		for (int i = 0; i < easyIndex; i++) {
-			int tempv = placedMask[vIndex][i];
-			int c = color[tempv];
-			unput(tempv, c);
+			int tempv2 = placedMask[vIndex][i];
+			int c2 = solvedBoard[tempv2];
+			unput(tempv2, c2);
 			placedNumbers--;
 		}
+	}
+
+	final private void resetLineMask(int vIndex) {
 		if (lineCounters[vIndex] > 0) {
 			for (int i = 0; i < 81; i++) {
 				for (int c = 0; c < 9; c++) {
-					if (lineMask2[vIndex][i][c]) {
+					if (lineMask[vIndex][i][c]) {
 						enable(i, c);
-						lineMask2[vIndex][i][c] = false;
+						lineMask[vIndex][i][c] = false;
 					}
 				}
 			}
-		}
+		}		
+		isImpossible = false;
 	}
 
 	final private int placeEasy(int vIndex) {
@@ -208,8 +201,8 @@ public class Sudoku {
 			while (placedNumbers > tempPlaced + 5) {
 				tempPlaced = placedNumbers;
 				easyIndex = placeNakedSingles(vIndex, easyIndex);
-				if (easyIndex < 0) {
-					return -1;
+				if (isImpossible) {
+					return easyIndex;
 				}
 			}
 
@@ -217,14 +210,17 @@ public class Sudoku {
 			while (placedNumbers < 55*1 && placedNumbers > tempPlaced + 2) {
 				tempPlaced = placedNumbers;
 				easyIndex = placeHiddenSingles(vIndex, easyIndex);
+				if (isImpossible) {
+					return easyIndex;
+				}
 			}
 
 			tempPlaced = 0;
 			while (placedNumbers < 65*1 && placedNumbers > tempPlaced + 1) {
 				tempPlaced = placedNumbers;
 				easyIndex = placeNakedSingles(vIndex, easyIndex);
-				if (easyIndex < 0) {
-					return -1;
+				if (isImpossible) {
+					return easyIndex;
 				}
 			}
 
@@ -251,23 +247,22 @@ public class Sudoku {
 					possibilities >>= 1;
 					c++;
 				}
-				put(tempv, c);
-				placedMask[vIndex][easyIndex++] = tempv;
-				placedNumbers++;				
-			} else if (possibilities == 0 && color[tempv] == -1 
-				|| isImpossible) {
-				
-				for (int i = 0; i < easyIndex; i++) {
-					int tempv2 = placedMask[vIndex][i];
-					int c2 = color[tempv2];
-					unput(tempv2, c2);
-					placedNumbers--;
+				if (isPossible(tempv, c)) {
+					put(tempv, c);
+					placedMask[vIndex][easyIndex++] = tempv;
+					placedNumbers++;
+				} else {
+					isImpossible = true;
+					return easyIndex;
 				}
-				return -1;
+			} else if (possibilities == 0 && solvedBoard[tempv] == -1) {
+				isImpossible = true;
+				return easyIndex;
 			}
 		}
 		return easyIndex;
 	}
+
 
 	final private int placeHiddenSingles(int vIndex, int easyIndex) {
 		for (int[] i : sectionCounters) {
@@ -301,6 +296,7 @@ public class Sudoku {
 						sectionCounters[c][18 + cell] = 9;
 					} else {
 						isImpossible = true;
+						return easyIndex;
 					}
 				}
 			}
@@ -316,6 +312,7 @@ public class Sudoku {
 						sectionCounters[c][18 + cell]++;
 					} else {
 						isImpossible = true;
+						return easyIndex;
 					}
 				}
 			}
@@ -330,6 +327,7 @@ public class Sudoku {
 						placedNumbers++;
 					} else {
 						isImpossible = true;
+						return easyIndex;
 					}
 				}
 			}
@@ -339,7 +337,7 @@ public class Sudoku {
 	}
 
 	final private int getFormattedMask(int v) {
-		if (color[v] >= 0) {
+		if (solvedBoard[v] >= 0) {
 			return 0;
 		}
 		int x = 0;
@@ -362,6 +360,13 @@ public class Sudoku {
 			formattedMask[i] = getFormattedMask(i);
 		}
 	}
+
+	final private void generateFormattedMasks(int[] idxs) {
+		for (int i : idxs) {
+			formattedMask[i] = getFormattedMask(i);
+		}
+	}
+
 
 	final private void checkNakedDoubles(int vIndex) {
 		generateFormattedMasks();
@@ -387,14 +392,14 @@ public class Sudoku {
 						c1 = k;
 						for (int cell = (i/9)*9; cell < (i/9+1)*9; cell++) {
 							if (cell != i && cell != j) {
-								if (!lineMask2[vIndex][cell][c0]) {
+								if (!lineMask[vIndex][cell][c0]) {
 									disable(cell, c0);
-									lineMask2[vIndex][cell][c0] = true;
+									lineMask[vIndex][cell][c0] = true;
 									lineCounters[vIndex]++;
 								}
-								if (!lineMask2[vIndex][cell][c1]) {
+								if (!lineMask[vIndex][cell][c1]) {
 									disable(cell, c1);
-									lineMask2[vIndex][cell][c1] = true;
+									lineMask[vIndex][cell][c1] = true;
 									lineCounters[vIndex]++;
 								}
 							}
@@ -427,14 +432,14 @@ public class Sudoku {
 						c1 = k;
 						for (int cell = i % 9; cell < 81; cell += 9) {
 							if (cell != i && cell != j) {
-								if (!lineMask2[vIndex][cell][c0]) {
+								if (!lineMask[vIndex][cell][c0]) {
 									disable(cell, c0);
-									lineMask2[vIndex][cell][c0] = true;
+									lineMask[vIndex][cell][c0] = true;
 									lineCounters[vIndex]++;
 								}
-								if (!lineMask2[vIndex][cell][c1]) {
+								if (!lineMask[vIndex][cell][c1]) {
 									disable(cell, c1);
-									lineMask2[vIndex][cell][c1] = true;
+									lineMask[vIndex][cell][c1] = true;
 									lineCounters[vIndex]++;
 								}
 							}
@@ -468,14 +473,14 @@ public class Sudoku {
 							for (int cellIdx = 0; cellIdx < 9; cellIdx++) {
 								if (cellIdx != i && cellIdx != j) {
 									int cell = cells[idx][cellIdx];
-									if (!lineMask2[vIndex][cell][c0]) {
+									if (!lineMask[vIndex][cell][c0]) {
 										disable(cell, c0);
-										lineMask2[vIndex][cell][c0] = true;
+										lineMask[vIndex][cell][c0] = true;
 										lineCounters[vIndex]++;
 									}
-									if (!lineMask2[vIndex][cell][c1]) {
+									if (!lineMask[vIndex][cell][c1]) {
 										disable(cell, c1);
-										lineMask2[vIndex][cell][c1] = true;
+										lineMask[vIndex][cell][c1] = true;
 										lineCounters[vIndex]++;
 									}
 								}
@@ -524,19 +529,19 @@ public class Sudoku {
 								c2 = l;
 								for (int cell = (i/9)*9; cell < (i/9+1)*9; cell++) {
 									if (cell != i && cell != j && cell != k) {
-										if (!lineMask2[vIndex][cell][c0]) {
+										if (!lineMask[vIndex][cell][c0]) {
 											disable(cell, c0);
-											lineMask2[vIndex][cell][c0] = true;
+											lineMask[vIndex][cell][c0] = true;
 											lineCounters[vIndex]++;
 										}
-										if (!lineMask2[vIndex][cell][c1]) {
+										if (!lineMask[vIndex][cell][c1]) {
 											disable(cell, c1);
-											lineMask2[vIndex][cell][c1] = true;
+											lineMask[vIndex][cell][c1] = true;
 											lineCounters[vIndex]++;
 										}
-										if (!lineMask2[vIndex][cell][c2]) {
+										if (!lineMask[vIndex][cell][c2]) {
 											disable(cell, c2);
-											lineMask2[vIndex][cell][c2] = true;
+											lineMask[vIndex][cell][c2] = true;
 											lineCounters[vIndex]++;
 										}
 									}
@@ -554,14 +559,11 @@ public class Sudoku {
 			if ((bitmask & 0xffff) == 3) {
 				for (int j = i+9; j < 81; j += 9) {
 					int bitmask_j = formattedMask[j];
-					// if (bitmask == bitmask_j) {
 					if (bitmask_j > 0 && bitmask == (bitmask | bitmask_j)) {
 						for (int k = j+9; k < 81; k += 9) {
 							int bitmask_k = formattedMask[k];
-							// if (bitmask == bitmask_k) {
 							if (bitmask_k > 0 && bitmask == (bitmask | bitmask_k)) {
 
-								// bitmask >>= 16;
 								int bitmask_shifted = bitmask >> 16;
 								int c0, c1, c2, l = 0;
 								while ((bitmask_shifted & 1) == 0) {
@@ -585,19 +587,19 @@ public class Sudoku {
 								c2 = l;
 								for (int cell = i%9; cell < 81; cell += 9) {
 									if (cell != i && cell != j && cell != k) {
-										if (!lineMask2[vIndex][cell][c0]) {
+										if (!lineMask[vIndex][cell][c0]) {
 											disable(cell, c0);
-											lineMask2[vIndex][cell][c0] = true;
+											lineMask[vIndex][cell][c0] = true;
 											lineCounters[vIndex]++;
 										}
-										if (!lineMask2[vIndex][cell][c1]) {
+										if (!lineMask[vIndex][cell][c1]) {
 											disable(cell, c1);
-											lineMask2[vIndex][cell][c1] = true;
+											lineMask[vIndex][cell][c1] = true;
 											lineCounters[vIndex]++;
 										}
-										if (!lineMask2[vIndex][cell][c2]) {
+										if (!lineMask[vIndex][cell][c2]) {
 											disable(cell, c2);
-											lineMask2[vIndex][cell][c2] = true;
+											lineMask[vIndex][cell][c2] = true;
 											lineCounters[vIndex]++;
 										}
 									}
@@ -615,14 +617,11 @@ public class Sudoku {
 				if ((bitmask & 0xffff) == 3) {
 					for (int j = i+1; j < 9; j++) {
 						int bitmask_j = formattedMask[cells[idx][j]];
-						// if (bitmask == bitmask_j) {
 						if (bitmask_j > 0 && bitmask == (bitmask | bitmask_j)) {
 							for (int k = j+1; k < 9; k++) {
 								int bitmask_k = formattedMask[cells[idx][k]];
-								// if (bitmask == bitmask_k) {
 								if (bitmask_k > 0 && bitmask == (bitmask | bitmask_k)) {
 
-									// bitmask >>= 16;
 									int bitmask_shifted = bitmask >> 16;
 									int c0, c1, c2, l = 0;
 									while ((bitmask_shifted & 1) == 0) {
@@ -647,19 +646,19 @@ public class Sudoku {
 									for (int cellIdx = 0; cellIdx < 9; cellIdx++) {
 										if (cellIdx != i && cellIdx != j && cellIdx != k) {
 											int cell = cells[idx][cellIdx];
-											if (!lineMask2[vIndex][cell][c0]) {
+											if (!lineMask[vIndex][cell][c0]) {
 												disable(cell, c0);
-												lineMask2[vIndex][cell][c0] = true;
+												lineMask[vIndex][cell][c0] = true;
 												lineCounters[vIndex]++;
 											}
-											if (!lineMask2[vIndex][cell][c1]) {
+											if (!lineMask[vIndex][cell][c1]) {
 												disable(cell, c1);
-												lineMask2[vIndex][cell][c1] = true;
+												lineMask[vIndex][cell][c1] = true;
 												lineCounters[vIndex]++;
 											}
-											if (!lineMask2[vIndex][cell][c2]) {
+											if (!lineMask[vIndex][cell][c2]) {
 												disable(cell, c2);
-												lineMask2[vIndex][cell][c2] = true;
+												lineMask[vIndex][cell][c2] = true;
 												lineCounters[vIndex]++;
 											}
 										}
@@ -710,9 +709,9 @@ public class Sudoku {
 						if (j != i) {
 							for (int k = rowIdx*3; k < (rowIdx+1)*3; k++) {
 								int cell = cells[j][k];
-								if (!lineMask2[vIndex][cell][c]) {
+								if (!lineMask[vIndex][cell][c]) {
 									disable(cell, c);
-									lineMask2[vIndex][cell][c] = true;
+									lineMask[vIndex][cell][c] = true;
 									lineCounters[vIndex]++;
 								}
 							}
@@ -725,9 +724,9 @@ public class Sudoku {
 						if (j != i) {
 							for (int k = colIdx; k < 9; k += 3) {
 								int cell = cells[j][k];
-								if (!lineMask2[vIndex][cell][c]) {
+								if (!lineMask[vIndex][cell][c]) {
 									disable(cell, c);
-									lineMask2[vIndex][cell][c] = true;
+									lineMask[vIndex][cell][c] = true;
 									lineCounters[vIndex]++;
 								}
 							}
@@ -739,23 +738,12 @@ public class Sudoku {
 	}
 
 	final private boolean isPossible(int v, int c) {
-		// checks++;
 		return mask[v][c] == 0;
 	}
 
-	final private int checkMask(int[][] neighbors, int v, int c) {
-		int tempValue = 0;
-		for (int n : neighbors[v]) {
-			if (mask[n][c] > 0) {
-				tempValue++;
-			}
-		}
-		return tempValue;
-	}
-
 	final private void put(int v, int c) {
-		color[v] = c;
-		puts++;
+		// System.out.println(String.format("putting %d on %d (%d, %d)", c+1, v, v/9+1, v%9+1));
+		solvedBoard[v] = c;
 		for (int i : neighbors[v]) {
 			mask[i][c]++;
 		}
@@ -765,13 +753,11 @@ public class Sudoku {
 	}
 
 	final private void disable(int v, int c) {
-		disables++;
 		mask[v][c]++;
 	}
 
 	final private void unput(int v, int c) {
-		color[v] = -1;
-		unputs++;
+		solvedBoard[v] = -1;
 		for (int i : neighbors[v]) {
 			mask[i][c]--;
 		}
@@ -781,7 +767,6 @@ public class Sudoku {
 	}
 
 	final private void enable(int v, int c) {
-		enables++;
 		mask[v][c]--;
 	}
 
@@ -814,7 +799,7 @@ public class Sudoku {
 		return (t2-t1) + unit;
 	}
 
-	public void display(int[] color) {
+	public void display(int[] board) {
 
 		for (int i = 0; i < 9; i++) {
 			if (i % 3 == 0) {
@@ -826,8 +811,8 @@ public class Sudoku {
 				} else {
 					System.out.print(" ");
 				}
-				if (color[i*9+j] != -1) {
-					System.out.print(color[i*9+j]+1);
+				if (board[i*9+j] != -1) {
+					System.out.print(board[i*9+j]+1);
 				} else {
 					System.out.print(" ");
 				}
@@ -837,7 +822,7 @@ public class Sudoku {
 		System.out.println("+-----+-----+-----+");
 	}
 
-	public void display2(int[] board, int[] color) {
+	public void display2(int[] board, int[] solved) {
 
 		for (int i = 0; i < 9; i++) {
 			if (i % 3 == 0) {
@@ -864,8 +849,8 @@ public class Sudoku {
 				} else {
 					System.out.print(" ");
 				}
-				if (color[i*9+j] != -1) {
-					System.out.print(color[i*9+j]+1);
+				if (solved[i*9+j] != -1) {
+					System.out.print(solved[i*9+j]+1);
 				} else {
 					System.out.print(" ");
 				}
@@ -945,6 +930,7 @@ public class Sudoku {
 				}
 				r.read();
 			}
+			r.close();
 		} catch (IOException ex) {
 			throw new RuntimeException(ex);
 		}
@@ -961,13 +947,14 @@ public class Sudoku {
 			s.append(i+1);
 		}
 		s.append(",");
-		for (int i : color) {
+		for (int i : solvedBoard) {
 			s.append(i+1);
 		}
 		return s.toString();
 	}
 
 	public static void main (String[] args) {
+		long t0 = System.nanoTime();
 		Sudoku gc = new Sudoku();
 		File f;
 		PrintWriter p;
@@ -981,7 +968,6 @@ public class Sudoku {
 			System.out.println("Usage: java Sudoku <input_file>");
 			return;
 		}
-		long t0 = System.nanoTime();
 		int[][] boards = gc.getInput(args[0]);
 		long tinp = System.nanoTime();
 		gc.connect();
@@ -1011,6 +997,7 @@ public class Sudoku {
 			}
 			solveTimes[i] = elapsed;
 			p.println(gc.getSolution());
+			// break;
 		}
 
 		p.close();
@@ -1023,14 +1010,9 @@ public class Sudoku {
 			+ gc.printTime(0, maxSolveTime) + " for board " + maxSolveIndex);
 		gc.display(boards[maxSolveIndex]);
 		System.out.println();
-		System.out.println(String.format("disables: %9d\nenables:  %9d\n"
-			+ "puts:     %9d\nunputs:   %9d\n" 
-			+ "checks: %d\noneCount: %d\noneSuccess: %d\noneCancel: %d", 
-			gc.disables, gc.enables, gc.puts, gc.unputs, gc.checks, 
-			gc.oneCount, gc.oneSuccess, gc.oneCancel));
 
 		System.out.println("Total time (including prints): " 
-			+ gc.printTime(t1,t2));
+			+ gc.printTime(t0,t2));
 		System.out.println("Sudoku solving time: " 
 			+ gc.printTime(0,gc.getTime()));
 		System.out.println("Average time per board: " 

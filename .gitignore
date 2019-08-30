@@ -29,3 +29,6 @@ SudokuSolver.java
 SudokuSolver2.java
 profiling/
 ppcg/
+
+*.out
+*.in
