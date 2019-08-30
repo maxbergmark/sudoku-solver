@@ -710,7 +710,7 @@ inline bool Sudoku::isPossible(int v, int c) {
 inline void Sudoku::put(int v, int c) {
 	solvedBoard[v] = c;
 	for (int i : neighbors[v]) {
-		printf("%d, %d, %d\n", v, c, i);
+		// printf("%d, %d, %d\n", v, c, i);
 		mask[i][c]++;
 	}
 	for (int i = 0; i < 9; i++) {
@@ -869,8 +869,12 @@ std::vector<std::vector<signed char>> Sudoku::getInput(std::string filename) {
 
 
 int main(int argc, char **argv) {
-	omp_set_num_threads(8);
-	std::vector<Sudoku> solvers(8);
+	int n = 1;
+	if (argc == 3) {
+		n = std::atoi(argv[2]);
+	}
+	omp_set_num_threads(n);
+	std::vector<Sudoku> solvers(n);
 	std::vector<std::vector<signed char>> boards = Sudoku::getInput(argv[1]);
 	for (Sudoku &solver : solvers) {
 		solver.connect();
@@ -878,12 +882,12 @@ int main(int argc, char **argv) {
 	std::vector<std::string> res;
 	res.resize(boards.size());
 	std::cout << boards.size() << std::endl;
-	// #pragma omp parallel for schedule(static)
+	#pragma omp parallel for schedule(static)
 	for (int i = 0; i < boards.size(); i++) {
 		int tid = omp_get_thread_num();
 		solvers[tid].solveSudoku(boards[i]);
 		res[i] = solvers[tid].getSolution();
-		break;
+		// break;
 		// if (i == 1000) {
 			// break;
 		// }
