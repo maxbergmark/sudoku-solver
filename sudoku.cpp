@@ -867,7 +867,24 @@ std::vector<std::vector<signed char>> Sudoku::getInput(std::string filename) {
 	return boards;
 }
 
+char* Sudoku::getInputChars(std::string filename, int &size) {
 
+	std::ifstream in(filename);
+
+	std::string first_line;
+	getline(in, first_line);
+	size = std::stoi(first_line);
+	char* boards = (char*) malloc(size * 82 * sizeof(char));
+
+	for (int i = 0; i < size; i++) {
+		in.read(&boards[82*i], 82);
+
+	}
+	return boards;
+
+}
+
+/*
 int main(int argc, char **argv) {
 	int n = 1;
 	if (argc == 3) {
@@ -882,7 +899,7 @@ int main(int argc, char **argv) {
 	std::vector<std::string> res;
 	res.resize(boards.size());
 	std::cout << boards.size() << std::endl;
-	#pragma omp parallel for schedule(static)
+	#pragma omp parallel for schedule(dynamic, 5000)
 	for (int i = 0; i < boards.size(); i++) {
 		int tid = omp_get_thread_num();
 		solvers[tid].solveSudoku(boards[i]);
@@ -902,3 +919,4 @@ int main(int argc, char **argv) {
 		// std::cout << s << std::endl;
 	}
 }
+*/

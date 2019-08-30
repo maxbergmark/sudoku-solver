@@ -67,4 +67,5 @@ public:
 	std::string getSolution();
 	static std::string printTime(long t1, long t2);
 	static std::vector<std::vector<signed char>> getInput(std::string filename);
+	static char* getInputChars(std::string filename, int &size);
 };
