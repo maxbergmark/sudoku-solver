@@ -7,7 +7,9 @@
 #include "sudoku.h"
 
 
-void process_batch(std::vector<std::vector<signed char>> &boards, int n) {
+void process_batch(std::vector<std::vector<signed char>> &boards, 
+	int n, int world_rank) {
+
 	omp_set_num_threads(n);
 	std::vector<Sudoku> solvers(n);
 	for (Sudoku &solver : solvers) {
@@ -21,10 +23,9 @@ void process_batch(std::vector<std::vector<signed char>> &boards, int n) {
 		int tid = omp_get_thread_num();
 		solvers[tid].solveSudoku(boards[i]);
 		res[i] = solvers[tid].getSolution();
-		// break;
-		// if (i == 1000) {
-			// break;
-		// }
+		if (i % 100000 == 0) {
+			fprintf(stderr, "Completed sudoku %d on %d\n", i, world_rank);
+		}
 	}
 	for (Sudoku &solver : solvers) {
 		fprintf(stderr, "easily solved: %d / %d\n", 
@@ -58,7 +59,6 @@ std::vector<std::vector<signed char>> divide_work(
 	recvbuf = (char*) malloc(own_size * sizeof(char));
 
 	// std::vector<std::vector<signed char>> batch(own_size);
-	printf("%d: %d -> %d\n", world_rank, size, own_size);
 
 	MPI_Scatterv(boards, send_counts, displs,
 		MPI_CHAR, recvbuf, own_size,
@@ -87,13 +87,13 @@ int main(int argc, char **argv) {
 	if (argc == 3) {
 		n = std::atoi(argv[2]);
 		if (world_rank == 0) {
-			printf("Running on %d threads\n", n);
+			fprintf(stderr, "Running on %d threads\n", n);
 		}
 	}
 	std::string filename = argv[1];
 	std::vector<std::vector<signed char>> batch = divide_work(
 		filename, world_rank, world_size);
-	process_batch(batch, n);
+	process_batch(batch, n, world_rank);
 
 	MPI_Finalize();
 
