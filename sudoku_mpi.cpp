@@ -95,7 +95,7 @@ std::vector<std::vector<signed char>> transform_buffer(char* buffer, int size) {
 
 	std::vector<std::vector<signed char>> batch(
 		size / 82, std::vector<signed char>(81));
-
+	#pragma omp parallel for schedule(static)
 	for (int i = 0; i < size / 82; i++) {
 		for (int j = 0; j < 81; j++) {
 			batch[i][j] = buffer[82*i + j] - 49;
@@ -180,21 +180,25 @@ void process_work(int world_rank, int n, int world_size) {
 	char* buf = (char*) malloc((82 * batch_size + 1) * sizeof(char));
 	char* send_buf = (char*) malloc((164 * batch_size + 1) * sizeof(char));
 	send_buf[164 * batch_size] = '\0';
+	double t0, t1;
 
 	do {
 		MPI_Recv(&recv_size, 1, MPI_INT,
 			0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		// fprintf(stderr, "Processing %d on rank %d\n", recv_size * 82, world_rank);
 		if (recv_size > 0) {
 			MPI_Recv(buf, recv_size * 82, MPI_CHAR,
 				0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
+			t0 = get_wall_time();
+			fprintf(stderr, "communicate: %.3f\n", 1e3*(t0-t1));
 			std::vector<std::vector<signed char>> batch = transform_buffer(buf, recv_size * 82);
 			std::vector<std::string> res = process_batch(batch, n, world_rank, batch_size);
+			#pragma omp parallel for schedule(static)
 			for (int i = 0; i < res.size(); i++) {
 				sprintf(&send_buf[(81*2+2)*i], "%s", res[i].c_str());
 				send_buf[164 * (i+1) - 1] = '\n';
 			}
+			t1 = get_wall_time();
+			fprintf(stderr, "crunching:   %.3f\n", 1e3*(t1-t0));
 			// fprintf(stderr, "%s", send_buf);
 
 			// fprintf(stderr, "Sending %d from rank %d\n", recv_size, world_rank);
@@ -211,7 +215,7 @@ void process_work(int world_rank, int n, int world_size) {
 void manage_work(int world_rank, int world_size, std::string filename, int n) {
 
 	int size;
-	int batch_size = 10000;
+	int batch_size = 50000;
 	char *sudokus = Sudoku::getInputChars(filename, size);
 	char *output = (char*) malloc((164 * size + 1) * sizeof(char));
 	output[164*size] = '\0';
@@ -222,18 +226,18 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 
 	MPI_Bcast(&batch_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-	// int batch_size = 1000;
 	int size_left = size;
 	int batch_number = 0;
 	int recv_index = 0, send_index = 0;
-	// std::cerr << "size_left: " << size_left << std::endl;
+	int batches = (size + batch_size - 1) / batch_size;
+
 	MPI_Request size_requests[world_size - 1];
 	MPI_Request batch_requests[world_size - 1];
 	MPI_Request recv_requests[world_size - 1];
 	int send_sizes[world_size];
 
 	if (size < batch_size) {
-		fprintf(stderr, "running task on master\n");
+		fprintf(stderr, "Running task on master\n");
 		std::vector<std::vector<signed char>> batch
 			= transform_buffer(sudokus, 82*size);
 		process_batch(batch, n, world_rank, size);
@@ -272,14 +276,15 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 					0, MPI_COMM_WORLD, &size_requests[i-1]);
 				if (send_sizes[i] > 0) {
 					batch_number++;
-					fprintf(stderr, "Sending batch %3d of size %8d to %2d (%8d / %8lu)\n",
-						batch_number, send_sizes[i] * 82, i, send_index, strlen(sudokus));
-					MPI_Isend(&sudokus[send_index], send_sizes[i] * 82, MPI_CHAR, i,
-						1, MPI_COMM_WORLD, &batch_requests[i-1]);
+					fprintf(stderr, "Sending batch %3d / %3d of "
+						"size %6d to %2d (%9d / %9lu)\n",
+						batch_number, batches, send_sizes[i] * 82, 
+						i, send_index, strlen(sudokus));
+					MPI_Isend(&sudokus[send_index], send_sizes[i] * 82, 
+						MPI_CHAR, i, 1, MPI_COMM_WORLD, &batch_requests[i-1]);
 
-					// fprintf(stderr, "Waiting for %d to index %d from %d (%d)\n", 164 * send_sizes[i], recv_index, i, size_left);
-					MPI_Irecv(&output[recv_index], 164 * send_sizes[i], MPI_CHAR,
-						i, 1, MPI_COMM_WORLD, &recv_requests[i-1]);
+					MPI_Irecv(&output[recv_index], 164 * send_sizes[i], 
+						MPI_CHAR, i, 1, MPI_COMM_WORLD, &recv_requests[i-1]);
 					recv_index += 164 * send_sizes[i];
 					send_index += 82 * send_sizes[i];
 				} else if (!worker_done[i])  {
@@ -287,8 +292,6 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 					completed_workers++;
 					worker_done[i] = true;
 				}
-			} else {
-				// fprintf(stderr, "check failed: %d\n", check);
 			}
 		}
 		usleep(1000);
