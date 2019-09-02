@@ -26,7 +26,6 @@ std::vector<std::string> process_batch(
 	}
 	std::vector<std::string> res;
 	res.resize(boards.size());
-	// std::cout << boards.size() << std::endl;
 	double max_time = 0;
 	int max_index;
 
@@ -50,15 +49,19 @@ std::vector<std::string> process_batch(
 		}
 	}
 
-	std::cerr << "Hardest board: " << Sudoku::printTime(0, max_time*1e9) 
+	std::cerr << "Hardest board on " << world_rank <<": " 
+		<< Sudoku::printTime(0, max_time*1e9) 
 		<< " for board " << max_index << std::endl;
 	Sudoku::display(boards[max_index], std::cerr);
 
+	int easySolved = 0, totalSolved = 0, guesses = 0;
 	for (Sudoku &solver : solvers) {
-		fprintf(stderr, "easily solved: %d / %d\tguesses/board: %.2f\n", 
-			solver.easySolved, solver.totalSolved,
-			(double) solver.guesses / solver.totalSolved);
+		easySolved += solver.easySolved;
+		totalSolved += solver.totalSolved;
+		guesses += solver.guesses;
 	}
+	fprintf(stderr, "Easily solved: %d / %d\tGuesses/board: %.2f\n", 
+		easySolved, totalSolved, (double) guesses / totalSolved);
 	return res;	
 }
 
@@ -102,6 +105,7 @@ std::vector<std::vector<signed char>> divide_work(
 			batch[i][j] = recvbuf[82*i + j] - 49;
 		}
 	}
+	free(recvbuf);
 
 	return batch;
 }
@@ -112,7 +116,8 @@ void collect_work(int world_rank, int world_size,
 
 	int buf_size = get_gather_buffer_size(
 		size, world_rank, world_size);
-	char *buf = (char*) malloc(buf_size * sizeof(char));
+	MPI_Barrier(MPI_COMM_WORLD);
+	char *buf = (char*) malloc((buf_size+1) * sizeof(char));
 	char *recvbuf;
 	int recv_counts[world_size], displs[world_size];
 	int recv_count;
@@ -132,9 +137,7 @@ void collect_work(int world_rank, int world_size,
 			}
 		}
 		recvbuf = (char*) malloc((recv_count + 1) * sizeof(char));
-		recvbuf[recv_count-1] = '\0';
 	}
-
 
 	MPI_Gatherv(buf, buf_size, MPI_CHAR,
         recvbuf, recv_counts, displs, MPI_CHAR,
@@ -143,7 +146,9 @@ void collect_work(int world_rank, int world_size,
 	if (world_rank == 0) {
 		printf("%d\n", recv_count / 164);
 		printf("%s", recvbuf);
+		free(recvbuf);
 	}
+	free(buf);
 
 }
 
