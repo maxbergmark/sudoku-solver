@@ -1,6 +1,6 @@
 #include <fstream>
 #include <iostream>
-#include <bits/stdc++.h> 
+#include <bits/stdc++.h>
 #include <omp.h>
 #include <mpi.h>
 #include <sys/time.h>
@@ -20,7 +20,7 @@ double get_wall_time() {
 }
 
 std::vector<std::string> process_batch(
-	std::vector<std::vector<signed char>> &boards, 
+	std::vector<std::vector<signed char>> &boards,
 	int n, int world_rank, int size) {
 
 	if (world_rank == 0) {
@@ -46,7 +46,7 @@ std::vector<std::string> process_batch(
 		double t1 = get_wall_time();
 		res[i] = solvers[tid].getSolution();
 		if (i > 0 && i % 10000 == 0 && VERBOSE) {
-			fprintf(stderr, "Completed sudoku %d / %lu (%d total) on %d\n", 
+			fprintf(stderr, "Completed sudoku %d / %lu (%d total) on %d\n",
 				i, boards.size(), size, world_rank);
 		}
 		if (t1-t0 > max_time) {
@@ -65,21 +65,21 @@ std::vector<std::string> process_batch(
 		guesses += solver.guesses;
 	}
 	if (VERBOSE) {
-		std::cerr << "Hardest board on " << world_rank <<": " 
-			<< Sudoku::printTime(0, max_time*1e9) 
+		std::cerr << "Hardest board on " << world_rank <<": "
+			<< Sudoku::printTime(0, max_time*1e9)
 			<< " for board " << max_index << std::endl;
-		fprintf(stderr, "Easily solved: %d / %d\tGuesses/board: %.2f\n", 
+		fprintf(stderr, "Easily solved: %d / %d\tGuesses/board: %.2f\n",
 			easySolved, totalSolved, (double) guesses / totalSolved);
 		Sudoku::display(boards[max_index], std::cerr);
 	}
-	return res;	
+	return res;
 }
 
 int get_scatter_buffer_size(int size, int world_rank, int world_size) {
 	if (world_rank == 0) {
 		return 0;
 	}
-	return (81 + 1) * (size/(world_size - 1) 
+	return (81 + 1) * (size/(world_size - 1)
 		+ (world_rank - 1 < size % (world_size - 1)));
 }
 
@@ -87,7 +87,7 @@ int get_gather_buffer_size(int size, int world_rank, int world_size) {
 	if (world_rank == 0) {
 		return 0;
 	}
-	return (81*2 + 2) * (size/(world_size - 1) 
+	return (81*2 + 2) * (size/(world_size - 1)
 		+ (world_rank - 1 < size % (world_size - 1)));
 }
 
@@ -101,7 +101,6 @@ std::vector<std::vector<signed char>> transform_buffer(char* buffer, int size) {
 			batch[i][j] = buffer[82*i + j] - 49;
 		}
 	}
-	// free(buffer);
 	return batch;
 }
 
@@ -120,7 +119,7 @@ std::vector<std::vector<signed char>> divide_work(
 				displs[i] = displs[i-1] + send_counts[i-1];
 			}
 		}
-	} 
+	}
 	MPI_Bcast(&size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	own_size = get_scatter_buffer_size(size, world_rank, world_size);
 	recvbuf = (char*) malloc(own_size * sizeof(char));
@@ -135,7 +134,7 @@ std::vector<std::vector<signed char>> divide_work(
 	return batch;
 }
 
-void collect_work(int world_rank, int world_size, 
+void collect_work(int world_rank, int world_size,
 	std::vector<std::string>& res, int size) {
 
 	int buf_size = get_gather_buffer_size(
@@ -212,7 +211,7 @@ void process_work(int world_rank, int n, int world_size) {
 void manage_work(int world_rank, int world_size, std::string filename, int n) {
 
 	int size;
-	int batch_size = 50000;
+	int batch_size = 10000;
 	char *sudokus = Sudoku::getInputChars(filename, size);
 	char *output = (char*) malloc((164 * size + 1) * sizeof(char));
 	output[164*size] = '\0';
@@ -235,7 +234,7 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 
 	if (size < batch_size) {
 		fprintf(stderr, "running task on master\n");
-		std::vector<std::vector<signed char>> batch 
+		std::vector<std::vector<signed char>> batch
 			= transform_buffer(sudokus, 82*size);
 		process_batch(batch, n, world_rank, size);
 		int tmp = 0;
@@ -273,7 +272,7 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 					0, MPI_COMM_WORLD, &size_requests[i-1]);
 				if (send_sizes[i] > 0) {
 					batch_number++;
-					fprintf(stderr, "Sending batch %3d of size %8d to %2d (%8d / %8lu)\n", 
+					fprintf(stderr, "Sending batch %3d of size %8d to %2d (%8d / %8lu)\n",
 						batch_number, send_sizes[i] * 82, i, send_index, strlen(sudokus));
 					MPI_Isend(&sudokus[send_index], send_sizes[i] * 82, MPI_CHAR, i,
 						1, MPI_COMM_WORLD, &batch_requests[i-1]);
