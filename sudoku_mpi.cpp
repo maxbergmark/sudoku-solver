@@ -16,7 +16,8 @@ double get_wall_time() {
 }
 
 std::vector<std::string> process_batch(
-	std::vector<std::vector<signed char>> &boards, int n, int world_rank) {
+	std::vector<std::vector<signed char>> &boards, 
+	int n, int world_rank, int size) {
 
 	omp_set_num_threads(n);
 	std::vector<Sudoku> solvers(n);
@@ -37,7 +38,8 @@ std::vector<std::string> process_batch(
 		double t1 = get_wall_time();
 		res[i] = solvers[tid].getSolution();
 		if (i > 0 && i % 10000 == 0) {
-			fprintf(stderr, "Completed sudoku %d on %d\n", i, world_rank);
+			fprintf(stderr, "Completed sudoku %d / %lu (%d total) on %d\n", 
+				i, boards.size(), size, world_rank);
 		}
 		if (t1-t0 > max_time) {
 			#pragma omp critical
@@ -163,7 +165,7 @@ int main(int argc, char **argv) {
 	int size;
 	std::vector<std::vector<signed char>> batch = divide_work(
 		filename, world_rank, world_size, size);
-	std::vector<std::string> res = process_batch(batch, n, world_rank);
+	std::vector<std::string> res = process_batch(batch, n, world_rank, size);
 	collect_work(world_rank, world_size, res, size);
 
 	MPI_Finalize();
