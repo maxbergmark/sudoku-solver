@@ -63,6 +63,7 @@ void Sudoku::solveSudoku(std::vector<signed char> &board) {
 	if (solutionFound && placedNumbers == 81) {
 		easySolved += isEasy ? 1 : 0;
 		totalSolved++;
+		// display2(board, solvedBoard, std::cerr);
 		// totTime += t2-t1;
 		// if (shouldPrint || t2-t1 > 5*1_000_000_000L) {
 			// printf("Solution found\n");
@@ -74,7 +75,7 @@ void Sudoku::solveSudoku(std::vector<signed char> &board) {
 		// }
 	} else {
 		printf("No solution\n");
-		display2(unsolvedBoard, solvedBoard);
+		display2(unsolvedBoard, solvedBoard, std::cerr);
 		return;
 	}
 }
@@ -739,13 +740,14 @@ inline void Sudoku::enable(int v, int c) {
 
 void Sudoku::display(std::vector<signed char> &board, std::ostream& stream) {
 
+	stream << "┌─────┬─────┬─────┐" << std::endl;
 	for (int i = 0; i < 9; i++) {
-		if (i % 3 == 0) {
-			stream << "+-----+-----+-----+" << std::endl;
+		if (i > 0 && i % 3 == 0) {
+			stream << "├─────┼─────┼─────┤" << std::endl;
 		}
 		for (int j = 0; j < 9; j++) {
 			if (j % 3 == 0) {
-				stream << "|";
+				stream << "│";
 			} else {
 				stream << " ";
 			}
@@ -755,48 +757,62 @@ void Sudoku::display(std::vector<signed char> &board, std::ostream& stream) {
 				stream << " ";
 			}
 		}
-		stream << "|" << std::endl;
+		stream << "│" << std::endl;
 	}
-	stream << "+-----+-----+-----+" << std::endl;
+	stream << "└─────┴─────┴─────┘" << std::endl;
 }
 
-void Sudoku::display2(std::vector<signed char> &board, std::vector<signed char> &solved) {
+void Sudoku::display2(std::vector<signed char> &board, 
+	std::vector<signed char> &solved, std::ostream& stream) {
 
+	stream << "┌─────┬─────┬─────┐\t┌─────┬─────┬─────┐" << std::endl;
 	for (int i = 0; i < 9; i++) {
-		if (i % 3 == 0) {
-			printf("+-----+-----+-----+	 +-----+-----+-----+\n");
+		if (i > 0 && i % 3 == 0) {
+			// printf("+-----+-----+-----+	 +-----+-----+-----+\n");
+			stream << "├─────┼─────┼─────┤\t├─────┼─────┼─────┤" << std::endl;
 		}
 		for (int j = 0; j < 9; j++) {
 			if (j % 3 == 0) {
-				printf("|");
+				stream << "│";
+				// printf("|");
 			} else {
-				printf(" ");
+				stream << " ";
+				// printf(" ");
 			}
 			if (board[i*9+j] != -1) {
-				printf("%d", board[i*9+j]+1);
+				stream << board[i*9+j]+1;
+				// printf("%d", board[i*9+j]+1);
 			} else {
-				printf(" ");
+				stream << " ";
+				// printf(" ");
 			}
 		}
 
-		printf("|	 ");
+		stream << "│\t";
+		// printf("|\t");
 
 		for (int j = 0; j < 9; j++) {
 			if (j % 3 == 0) {
-				printf("|");
+				stream << "│";
+				// printf("|");
 			} else {
-				printf(" ");
+				stream << " ";
+				// printf(" ");
 			}
 			if (solved[i*9+j] != -1) {
-				printf("%d", solved[i*9+j]+1);
+				stream << solved[i*9+j]+1;
+				// printf("%d", solved[i*9+j]+1);
 			} else {
-				printf(" ");
+				stream << " ";
+				// printf(" ");
 			}
 		}
 
-		printf("|\n");
+		stream << "│" << std::endl;
+		// printf("|\n");
 	}
-	printf("+-----+-----+-----+	 +-----+-----+-----+\n");
+	// printf("+-----+-----+-----+	 +-----+-----+-----+\n");
+	stream << "└─────┴─────┴─────┘\t└─────┴─────┴─────┘" << std::endl;
 }
 
 std::string Sudoku::printTime(long t1, long t2) {
