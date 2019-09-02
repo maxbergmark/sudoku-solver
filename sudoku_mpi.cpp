@@ -49,19 +49,18 @@ std::vector<std::string> process_batch(
 		}
 	}
 
-	std::cerr << "Hardest board on " << world_rank <<": " 
-		<< Sudoku::printTime(0, max_time*1e9) 
-		<< " for board " << max_index << std::endl;
-	Sudoku::display(boards[max_index], std::cerr);
-
 	int easySolved = 0, totalSolved = 0, guesses = 0;
 	for (Sudoku &solver : solvers) {
 		easySolved += solver.easySolved;
 		totalSolved += solver.totalSolved;
 		guesses += solver.guesses;
 	}
+	std::cerr << "Hardest board on " << world_rank <<": " 
+		<< Sudoku::printTime(0, max_time*1e9) 
+		<< " for board " << max_index << std::endl;
 	fprintf(stderr, "Easily solved: %d / %d\tGuesses/board: %.2f\n", 
 		easySolved, totalSolved, (double) guesses / totalSolved);
+	Sudoku::display(boards[max_index], std::cerr);
 	return res;	
 }
 
