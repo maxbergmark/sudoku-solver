@@ -907,12 +907,12 @@ char* Sudoku::getInputChars(std::string filename, int &size) {
 	std::string first_line;
 	getline(in, first_line);
 	size = std::stoi(first_line);
-	char* boards = (char*) malloc(size * 82 * sizeof(char));
+	char* boards = (char*) malloc((size * 82 + 1) * sizeof(char));
 
 	for (int i = 0; i < size; i++) {
 		in.read(&boards[82*i], 82);
-
 	}
+	boards[82 * size] = '\0';
 	return boards;
 
 }
