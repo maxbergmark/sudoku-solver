@@ -74,7 +74,7 @@ std::vector<std::string> process_batch(
 	}
 	return res;
 }
-
+/*
 int get_scatter_buffer_size(int size, int world_rank, int world_size) {
 	if (world_rank == 0) {
 		return 0;
@@ -90,20 +90,19 @@ int get_gather_buffer_size(int size, int world_rank, int world_size) {
 	return (81*2 + 2) * (size/(world_size - 1)
 		+ (world_rank - 1 < size % (world_size - 1)));
 }
+*/
+void transform_buffer(char* buffer, int size, 
+	std::vector<std::vector<signed char>> &batch) {
 
-std::vector<std::vector<signed char>> transform_buffer(char* buffer, int size) {
-
-	std::vector<std::vector<signed char>> batch(
-		size / 82, std::vector<signed char>(81));
+	batch.resize(size / 82, std::vector<signed char>(81));
 	#pragma omp parallel for schedule(static)
 	for (int i = 0; i < size / 82; i++) {
 		for (int j = 0; j < 81; j++) {
 			batch[i][j] = buffer[82*i + j] - 49;
 		}
 	}
-	return batch;
 }
-
+/*
 std::vector<std::vector<signed char>> divide_work(
 	std::string filename, int world_rank, int world_size, int &size) {
 
@@ -128,12 +127,14 @@ std::vector<std::vector<signed char>> divide_work(
 		MPI_CHAR, recvbuf, own_size,
 		MPI_CHAR, 0, MPI_COMM_WORLD);
 
-	std::vector<std::vector<signed char>> batch = transform_buffer(recvbuf, own_size);
+	std::vector<std::vector<signed char>> batch;
+	transform_buffer(recvbuf, own_size, batch);
 
 	free(boards);
 	return batch;
 }
-
+*/
+/*
 void collect_work(int world_rank, int world_size,
 	std::vector<std::string>& res, int size) {
 
@@ -173,14 +174,15 @@ void collect_work(int world_rank, int world_size,
 	}
 	free(buf);
 }
-
+*/
 void process_work(int world_rank, int n, int world_size) {
 	int recv_size, batch_size;
 	MPI_Bcast(&batch_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	char* buf = (char*) malloc((82 * batch_size + 1) * sizeof(char));
 	char* send_buf = (char*) malloc((164 * batch_size + 1) * sizeof(char));
 	send_buf[164 * batch_size] = '\0';
-	double t0, t1;
+	// double t0, t1 = get_wall_time();
+	std::vector<std::vector<signed char>> batch;
 
 	do {
 		MPI_Recv(&recv_size, 1, MPI_INT,
@@ -188,17 +190,17 @@ void process_work(int world_rank, int n, int world_size) {
 		if (recv_size > 0) {
 			MPI_Recv(buf, recv_size * 82, MPI_CHAR,
 				0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			t0 = get_wall_time();
-			fprintf(stderr, "communicate: %.3f\n", 1e3*(t0-t1));
-			std::vector<std::vector<signed char>> batch = transform_buffer(buf, recv_size * 82);
+			// t0 = get_wall_time();
+			// fprintf(stderr, "communicate: %.3f\n", 1e3*(t0-t1));
+			transform_buffer(buf, recv_size * 82, batch);
 			std::vector<std::string> res = process_batch(batch, n, world_rank, batch_size);
 			#pragma omp parallel for schedule(static)
 			for (int i = 0; i < res.size(); i++) {
 				sprintf(&send_buf[(81*2+2)*i], "%s", res[i].c_str());
 				send_buf[164 * (i+1) - 1] = '\n';
 			}
-			t1 = get_wall_time();
-			fprintf(stderr, "crunching:   %.3f\n", 1e3*(t1-t0));
+			// t1 = get_wall_time();
+			// fprintf(stderr, "crunching:   %.3f\n", 1e3*(t1-t0));
 			// fprintf(stderr, "%s", send_buf);
 
 			// fprintf(stderr, "Sending %d from rank %d\n", recv_size, world_rank);
@@ -238,8 +240,8 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 
 	if (size < batch_size) {
 		fprintf(stderr, "Running task on master\n");
-		std::vector<std::vector<signed char>> batch
-			= transform_buffer(sudokus, 82*size);
+		std::vector<std::vector<signed char>> batch;
+		transform_buffer(sudokus, 82*size, batch);
 		process_batch(batch, n, world_rank, size);
 		int tmp = 0;
 		for (int i = 1; i < world_size; i++) {
@@ -318,13 +320,9 @@ int main(int argc, char **argv) {
 		}
 	}
 	std::string filename = argv[1];
-	// int size;
-	// std::vector<std::vector<signed char>> batch = divide_work(
-		// filename, world_rank, world_size, size);
+
 	if (world_rank != 0) {
 		process_work(world_rank, n, world_size);
-		// std::vector<std::string> res = process_batch(batch, n, world_rank, size);
-		// collect_work(world_rank, world_size, res, size);
 	} else {
 		manage_work(world_rank, world_size, filename, n);
 	}
