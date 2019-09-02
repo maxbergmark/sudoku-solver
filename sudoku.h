@@ -61,8 +61,8 @@ public:
 	void solveSudoku(std::vector<signed char> &board);
 	std::string getString(std::vector<signed char> &board);
 	long getTime();
-	void display(std::vector<signed char> &board);
-	void display2(std::vector<signed char> &board, std::vector<signed char> &solved);
+	static void display(std::vector<signed char> &board, std::ostream& stream);
+	static void display2(std::vector<signed char> &board, std::vector<signed char> &solved);
 	void connect();
 	std::string getSolution();
 	static std::string printTime(long t1, long t2);

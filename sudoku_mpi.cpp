@@ -3,9 +3,17 @@
 #include <bits/stdc++.h> 
 #include <omp.h>
 #include <mpi.h>
+#include <sys/time.h>
 
 #include "sudoku.h"
 
+double get_wall_time() {
+	struct timeval time;
+	if (gettimeofday(&time,NULL)){
+		return 0;
+	}
+	return (double)time.tv_sec + (double)time.tv_usec * 1e-6;
+}
 
 void process_batch(std::vector<std::vector<signed char>> &boards, 
 	int n, int world_rank) {
@@ -18,15 +26,33 @@ void process_batch(std::vector<std::vector<signed char>> &boards,
 	std::vector<std::string> res;
 	res.resize(boards.size());
 	std::cout << boards.size() << std::endl;
+	double max_time = 0;
+	int max_index;
+
 	#pragma omp parallel for schedule(dynamic, 1000)
 	for (int i = 0; i < boards.size(); i++) {
 		int tid = omp_get_thread_num();
+		double t0 = get_wall_time();
 		solvers[tid].solveSudoku(boards[i]);
+		double t1 = get_wall_time();
 		res[i] = solvers[tid].getSolution();
-		if (i % 10000 == 0) {
+		if (i > 0 && i % 10000 == 0) {
 			fprintf(stderr, "Completed sudoku %d on %d\n", i, world_rank);
 		}
+		if (t1-t0 > max_time) {
+			#pragma omp critical
+			{
+				max_time = t1-t0;
+				max_index = i;
+			}
+		}
 	}
+
+	std::cerr << "Hardest board: " << Sudoku::printTime(0, max_time*1e9) 
+		<< " for board " << max_index << std::endl;
+	// fprintf(stderr, "Hardest board: %s for board %d\n", , max_index);
+	Sudoku::display(boards[max_index], std::cerr);
+
 	for (Sudoku &solver : solvers) {
 		fprintf(stderr, "easily solved: %d / %d\n", 
 			solver.easySolved, solver.totalSolved);

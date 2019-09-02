@@ -737,27 +737,27 @@ inline void Sudoku::enable(int v, int c) {
 }
 
 
-void Sudoku::display(std::vector<signed char> &board) {
+void Sudoku::display(std::vector<signed char> &board, std::ostream& stream) {
 
 	for (int i = 0; i < 9; i++) {
 		if (i % 3 == 0) {
-			printf("+-----+-----+-----+\n");
+			stream << "+-----+-----+-----+" << std::endl;
 		}
 		for (int j = 0; j < 9; j++) {
 			if (j % 3 == 0) {
-				printf("|");
+				stream << "|";
 			} else {
-				printf(" ");
+				stream << " ";
 			}
 			if (board[i*9+j] != -1) {
-				printf("%d", board[i*9+j]+1);
+				stream << board[i*9+j]+1;
 			} else {
-				printf(" ");
+				stream << " ";
 			}
 		}
-		printf("|\n");
+		stream << "|" << std::endl;
 	}
-	printf("+-----+-----+-----+\n");
+	stream << "+-----+-----+-----+" << std::endl;
 }
 
 void Sudoku::display2(std::vector<signed char> &board, std::vector<signed char> &solved) {
@@ -797,6 +797,23 @@ void Sudoku::display2(std::vector<signed char> &board, std::vector<signed char> 
 		printf("|\n");
 	}
 	printf("+-----+-----+-----+	 +-----+-----+-----+\n");
+}
+
+std::string Sudoku::printTime(long t1, long t2) {
+	std::string unit = " ns";
+	if (t2-t1 > 10000) {
+		unit = " us";
+		t1 /= 1000; t2 /= 1000;
+	}
+	if (t2-t1 > 10000) {
+		unit = " ms";
+		t1 /= 1000; t2 /= 1000;
+	}
+	if (t2-t1 > 10000) {
+		unit = " seconds";
+		t1 /= 1000; t2 /= 1000;
+	}
+	return std::to_string(t2-t1) + unit;
 }
 
 std::string Sudoku::getSolution() {
