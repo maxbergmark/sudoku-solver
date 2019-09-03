@@ -19,21 +19,16 @@ double get_wall_time() {
 	return (double)time.tv_sec + (double)time.tv_usec * 1e-6;
 }
 
-std::vector<std::string> process_batch(
+void process_batch(
 	std::vector<std::vector<signed char>> &boards,
-	int n, int world_rank, int size) {
-
-	if (world_rank == 0) {
-		std::vector<std::string> ret;
-		return ret;
-	}
+	int n, int world_rank, int size, std::vector<std::string> &res) {
 
 	omp_set_num_threads(n);
 	std::vector<Sudoku> solvers(n);
 	for (Sudoku &solver : solvers) {
 		solver.connect();
 	}
-	std::vector<std::string> res;
+	// std::vector<std::string> res;
 	res.resize(boards.size());
 	double max_time = 0;
 	int max_index;
@@ -72,7 +67,7 @@ std::vector<std::string> process_batch(
 			easySolved, totalSolved, (double) guesses / totalSolved);
 		Sudoku::display(boards[max_index], std::cerr);
 	}
-	return res;
+	// return res;
 }
 /*
 int get_scatter_buffer_size(int size, int world_rank, int world_size) {
@@ -183,6 +178,7 @@ void process_work(int world_rank, int n, int world_size) {
 	send_buf[164 * batch_size] = '\0';
 	// double t0, t1 = get_wall_time();
 	std::vector<std::vector<signed char>> batch;
+	std::vector<std::string> res;
 
 	do {
 		MPI_Recv(&recv_size, 1, MPI_INT,
@@ -193,7 +189,7 @@ void process_work(int world_rank, int n, int world_size) {
 			// t0 = get_wall_time();
 			// fprintf(stderr, "communicate: %.3f\n", 1e3*(t0-t1));
 			transform_buffer(buf, recv_size * 82, batch);
-			std::vector<std::string> res = process_batch(batch, n, world_rank, batch_size);
+			process_batch(batch, n, world_rank, batch_size, res);
 			#pragma omp parallel for schedule(static)
 			for (int i = 0; i < res.size(); i++) {
 				sprintf(&send_buf[(81*2+2)*i], "%s", res[i].c_str());
@@ -237,12 +233,13 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 	MPI_Request batch_requests[world_size - 1];
 	MPI_Request recv_requests[world_size - 1];
 	int send_sizes[world_size];
-
+/*
 	if (size < batch_size) {
 		fprintf(stderr, "Running task on master\n");
 		std::vector<std::vector<signed char>> batch;
+		std::vector<std::string> res;
 		transform_buffer(sudokus, 82*size, batch);
-		process_batch(batch, n, world_rank, size);
+		process_batch(batch, n, world_rank, size, res);
 		int tmp = 0;
 		for (int i = 1; i < world_size; i++) {
 			MPI_Isend(&tmp, 1, MPI_INT, i,
@@ -250,7 +247,7 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 		}
 		return;
 	}
-
+*/
 	int completed_workers = 0;
 	bool worker_started[world_size];
 	bool worker_done[world_size];
