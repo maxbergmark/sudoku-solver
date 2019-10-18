@@ -255,6 +255,7 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 		worker_started[i] = false;
 		worker_done[i] = false;
 	}
+	double t0 = get_wall_time();
 
 	while (completed_workers < world_size - 1) {
 
@@ -275,10 +276,12 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 					0, MPI_COMM_WORLD, &size_requests[i-1]);
 				if (send_sizes[i] > 0) {
 					batch_number++;
+					double t1 = get_wall_time();
+					double elapsed = t1 - t0;
 					fprintf(stderr, "Sending batch %3d / %3d of "
-						"size %6d to %2d (%9d / %9lu)\n",
+						"size %6d to %2d (%9d / %9lu) (%.2f puzzles/second)\n",
 						batch_number, batches, send_sizes[i] * 82, 
-						i, send_index, strlen(sudokus));
+						i, send_index, strlen(sudokus), ((batch_number-1) * batch_size) / elapsed);
 					MPI_Isend(&sudokus[send_index], send_sizes[i] * 82, 
 						MPI_CHAR, i, 1, MPI_COMM_WORLD, &batch_requests[i-1]);
 
