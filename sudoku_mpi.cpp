@@ -9,7 +9,7 @@
 
 #include "sudoku.h"
 
-#define VERBOSE 0
+#define VERBOSE 1
 
 double get_wall_time() {
 	struct timeval time;
@@ -22,7 +22,6 @@ double get_wall_time() {
 void process_batch(
 	std::vector<std::vector<signed char>> &boards,
 	int n, int world_rank, int size, std::vector<std::string> &res) {
-
 	omp_set_num_threads(n);
 	std::vector<Sudoku> solvers(n);
 	for (Sudoku &solver : solvers) {
@@ -34,14 +33,14 @@ void process_batch(
 	int max_index;
 
 	#pragma omp parallel for schedule(dynamic, 1000)
-	for (int i = 0; i < boards.size(); i++) {
+	for (long unsigned int i = 0; i < boards.size(); i++) {
 		int tid = omp_get_thread_num();
 		double t0 = get_wall_time();
 		solvers[tid].solveSudoku(boards[i]);
 		double t1 = get_wall_time();
 		res[i] = solvers[tid].getSolution();
 		if (i > 0 && i % 10000 == 0 && VERBOSE) {
-			fprintf(stderr, "Completed sudoku %d / %lu (%d total) on %d\n",
+			fprintf(stderr, "Completed sudoku %lu / %lu (%d total) on %d\n",
 				i, boards.size(), size, world_rank);
 		}
 		if (t1-t0 > max_time) {
@@ -191,7 +190,7 @@ void process_work(int world_rank, int n, int world_size) {
 			transform_buffer(buf, recv_size * 82, batch);
 			process_batch(batch, n, world_rank, batch_size, res);
 			#pragma omp parallel for schedule(static)
-			for (int i = 0; i < res.size(); i++) {
+			for (long unsigned int i = 0; i < res.size(); i++) {
 				sprintf(&send_buf[(81*2+2)*i], "%s", res[i].c_str());
 				send_buf[164 * (i+1) - 1] = '\n';
 			}
@@ -278,10 +277,15 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 					batch_number++;
 					double t1 = get_wall_time();
 					double elapsed = t1 - t0;
+					double puzzles_per_second = 0;
+					if (batch_number > 1) {
+						puzzles_per_second = (
+							(batch_number-1) * batch_size) / elapsed;
+					}
 					fprintf(stderr, "Sending batch %3d / %3d of "
 						"size %6d to %2d (%9d / %9lu) (%.2f puzzles/second)\n",
 						batch_number, batches, send_sizes[i] * 82, 
-						i, send_index, strlen(sudokus), ((batch_number-1) * batch_size) / elapsed);
+						i, send_index, strlen(sudokus), puzzles_per_second);
 					MPI_Isend(&sudokus[send_index], send_sizes[i] * 82, 
 						MPI_CHAR, i, 1, MPI_COMM_WORLD, &batch_requests[i-1]);
 
