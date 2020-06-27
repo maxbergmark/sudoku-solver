@@ -2,10 +2,11 @@
 
 <p align="center">
 	<img src="/examples/solved.png" width="80%" />
+	<figcaption>Example solve for a difficult Sudoku puzzle</figcaption>
 </p>
 
 
-A repository for hosting the Sudoku solver which started back in 2015. Since then it's been highly optimized, and solves most sudokus within a few microseconds or milliseconds.
+A Sudoku solver project which started back in 2015. Since then it's been highly optimized, and solves most sudokus within a few microseconds or milliseconds.
 
 ## Compile and run
 
