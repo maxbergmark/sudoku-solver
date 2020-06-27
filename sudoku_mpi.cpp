@@ -22,6 +22,7 @@ double get_wall_time() {
 void process_batch(
 	std::vector<std::vector<signed char>> &boards,
 	int n, int world_rank, int size, std::vector<std::string> &res) {
+
 	omp_set_num_threads(n);
 	std::vector<Sudoku> solvers(n);
 	for (Sudoku &solver : solvers) {
@@ -64,27 +65,19 @@ void process_batch(
 			<< " for board " << max_index << std::endl;
 		fprintf(stderr, "Easily solved: %d / %d\tGuesses/board: %.2f\n",
 			easySolved, totalSolved, (double) guesses / totalSolved);
-		Sudoku::display(boards[max_index], std::cerr);
+		std::cerr << "Solution size: " << res.size() << std::endl;
+
+		std::vector<signed char> max_solved(
+			res[max_index].begin()+82, res[max_index].end());
+
+		for (long unsigned int i = 0; i < max_solved.size(); i++) {
+			max_solved[i] -= 49;
+		}
+		Sudoku::display2(boards[max_index], max_solved, std::cerr);
+
 	}
-	// return res;
-}
-/*
-int get_scatter_buffer_size(int size, int world_rank, int world_size) {
-	if (world_rank == 0) {
-		return 0;
-	}
-	return (81 + 1) * (size/(world_size - 1)
-		+ (world_rank - 1 < size % (world_size - 1)));
 }
 
-int get_gather_buffer_size(int size, int world_rank, int world_size) {
-	if (world_rank == 0) {
-		return 0;
-	}
-	return (81*2 + 2) * (size/(world_size - 1)
-		+ (world_rank - 1 < size % (world_size - 1)));
-}
-*/
 void transform_buffer(char* buffer, int size, 
 	std::vector<std::vector<signed char>> &batch) {
 
@@ -96,79 +89,7 @@ void transform_buffer(char* buffer, int size,
 		}
 	}
 }
-/*
-std::vector<std::vector<signed char>> divide_work(
-	std::string filename, int world_rank, int world_size, int &size) {
 
-	int own_size;
-	int send_counts[world_size], displs[world_size];
-	char *boards, *recvbuf;
-	if (world_rank == 0) {
-		boards = Sudoku::getInputChars(filename, size);
-		displs[0] = 0;
-		for (int i = 0; i < world_size; i++) {
-			send_counts[i] = get_scatter_buffer_size(size, i, world_size);
-			if (i > 0) {
-				displs[i] = displs[i-1] + send_counts[i-1];
-			}
-		}
-	}
-	MPI_Bcast(&size, 1, MPI_INT, 0, MPI_COMM_WORLD);
-	own_size = get_scatter_buffer_size(size, world_rank, world_size);
-	recvbuf = (char*) malloc(own_size * sizeof(char));
-
-	MPI_Scatterv(boards, send_counts, displs,
-		MPI_CHAR, recvbuf, own_size,
-		MPI_CHAR, 0, MPI_COMM_WORLD);
-
-	std::vector<std::vector<signed char>> batch;
-	transform_buffer(recvbuf, own_size, batch);
-
-	free(boards);
-	return batch;
-}
-*/
-/*
-void collect_work(int world_rank, int world_size,
-	std::vector<std::string>& res, int size) {
-
-	int buf_size = get_gather_buffer_size(
-		size, world_rank, world_size);
-	char *buf = (char*) malloc((buf_size+1) * sizeof(char));
-	char *recvbuf;
-	int recv_counts[world_size], displs[world_size];
-	int recv_count;
-
-	for (int i = 0; i < res.size(); i++) {
-		sprintf(&buf[(81*2+2)*i], "%s", res[i].c_str());
-		buf[164 * (i+1) - 1] = '\n';
-	}
-
-	if (world_rank == 0) {
-		recv_count = 0;
-		displs[0] = 0;
-		for (int i = 0; i < world_size; i++) {
-			recv_counts[i] = get_gather_buffer_size(size, i, world_size);
-			recv_count += recv_counts[i];
-			if (i > 0) {
-				displs[i] = displs[i-1] + recv_counts[i-1];
-			}
-		}
-		recvbuf = (char*) malloc((recv_count + 1) * sizeof(char));
-	}
-
-	MPI_Gatherv(buf, buf_size, MPI_CHAR,
-		recvbuf, recv_counts, displs, MPI_CHAR,
-		0, MPI_COMM_WORLD);
-
-	if (world_rank == 0) {
-		printf("%d\n", recv_count / 164);
-		printf("%s", recvbuf);
-		free(recvbuf);
-	}
-	free(buf);
-}
-*/
 void process_work(int world_rank, int n, int world_size) {
 	int recv_size, batch_size;
 	MPI_Bcast(&batch_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -194,6 +115,7 @@ void process_work(int world_rank, int n, int world_size) {
 				sprintf(&send_buf[(81*2+2)*i], "%s", res[i].c_str());
 				send_buf[164 * (i+1) - 1] = '\n';
 			}
+
 			// t1 = get_wall_time();
 			// fprintf(stderr, "crunching:   %.3f\n", 1e3*(t1-t0));
 			// fprintf(stderr, "%s", send_buf);
@@ -232,21 +154,7 @@ void manage_work(int world_rank, int world_size, std::string filename, int n) {
 	MPI_Request batch_requests[world_size - 1];
 	MPI_Request recv_requests[world_size - 1];
 	int send_sizes[world_size];
-/*
-	if (size < batch_size) {
-		fprintf(stderr, "Running task on master\n");
-		std::vector<std::vector<signed char>> batch;
-		std::vector<std::string> res;
-		transform_buffer(sudokus, 82*size, batch);
-		process_batch(batch, n, world_rank, size, res);
-		int tmp = 0;
-		for (int i = 1; i < world_size; i++) {
-			MPI_Isend(&tmp, 1, MPI_INT, i,
-				0, MPI_COMM_WORLD, &size_requests[i-1]);
-		}
-		return;
-	}
-*/
+
 	int completed_workers = 0;
 	bool worker_started[world_size];
 	bool worker_done[world_size];
