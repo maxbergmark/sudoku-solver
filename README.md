@@ -2,6 +2,7 @@
 
 <p align="center">
 	<img src="/examples/solved.png" width="80%" />
+	<br>
 	<font size="2">
 		Example solve for a difficult Sudoku puzzle
 	</font>
