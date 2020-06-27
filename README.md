@@ -1,15 +1,15 @@
 # MPI Sudoku solver
 
-<p align="center">
 	<figure class="image">
+<p align="center">
 		<img src="/examples/solved.png" width="80%" />
 		<font size="2">
 			<figcaption>
 				Example solve for a difficult Sudoku puzzle
 			</figcaption>
 		</font>
-	</figure>
 </p>
+	</figure>
 
 
 A Sudoku solver project which started back in 2015. Since then it's been highly optimized, and solves most sudokus within a few microseconds or milliseconds.
