@@ -1,8 +1,14 @@
 # MPI Sudoku solver
 
 <p align="center">
-	<img src="/examples/solved.png" width="80%" />
-	<figcaption>Example solve for a difficult Sudoku puzzle</figcaption>
+	<figure class="image">
+		<img src="/examples/solved.png" width="80%" />
+		<font size="2">
+			<figcaption>
+				Example solve for a difficult Sudoku puzzle
+			</figcaption>
+		</font>
+	</figure>
 </p>
 
 
