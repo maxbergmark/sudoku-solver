@@ -916,3 +916,32 @@ char* Sudoku::getInputChars(std::string filename, int &size) {
 
 }
 
+extern "C" {
+
+	Sudoku* Sudoku_new() {
+		Sudoku* s = new Sudoku();
+		s->connect();
+		return s;
+	}
+
+	void solve_sudokus(Sudoku* searcher, char** boards, int n) {
+		std::vector<std::vector<signed char>> vector_boards(n);
+		for (int i = 0; i < n; i++) {
+			vector_boards[i].resize(81);
+			for (int j = 0; j < 81; j++) {
+				vector_boards[i][j] = boards[i][j] - 49;
+			}
+			searcher->solveSudoku(vector_boards[i]);
+			std::string sol = searcher->getSolution();
+			for (int j = 0; j < 81; j++) {
+				boards[i][j] = sol[82+j];
+			}
+		}
+	}
+
+	void free_pointer(char* p) {
+		printf("freeing %p\n", p);
+		free(p);
+		printf("pointer freed\n");
+	}
+}

@@ -29,6 +29,9 @@ SudokuSolver.java
 SudokuSolver2.java
 profiling/
 ppcg/
+__pycache__/
+.venv/
 
 *.out
 *.in
+*.so
