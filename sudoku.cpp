@@ -1,7 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <bits/stdc++.h> 
-#include <omp.h>
+// #include <omp.h>
 
 #include "sudoku.h"
 
@@ -938,10 +938,11 @@ extern "C" {
 			}
 		}
 	}
-
+/*
 	void free_pointer(char* p) {
 		printf("freeing %p\n", p);
 		free(p);
 		printf("pointer freed\n");
 	}
+*/
 }

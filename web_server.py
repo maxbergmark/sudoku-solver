@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field, validator
 from fastapi import FastAPI
 
 lib = ctypes.CDLL('./sudoku_solver.so')
+lib.Sudoku_new.restype = ctypes.c_void_p
 lib.solve_sudokus.argtypes = (
 	ctypes.c_void_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_int)
 lib.solve_sudokus.restype = ctypes.c_void_p
@@ -70,7 +71,7 @@ def hello() -> HelloWorldOutput:
 
 @app.post('/solve-sudokus', 
 	response_model = SolveSudokuOutput)
-def memberships(input_model : SolveSudokuInput,
+def solve_sudokus(input_model : SolveSudokuInput,
 		) -> SolveSudokuOutput:
 	"""
 		Get all memberships for a single golf club, along with statistical

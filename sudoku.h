@@ -2,7 +2,8 @@
 #include <string>
 
 class Sudoku {
-private:
+// private:
+public:
 	std::vector<signed char> unsolvedBoard;
 	std::vector<signed char> solvedBoard; 
 	std::vector<std::vector<char>> neighbors;
@@ -50,7 +51,7 @@ private:
 	int getTotEasy();
 
 
-public:
+// public:
 
 	long totTime;
 	long lastPrint;
