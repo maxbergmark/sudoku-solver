@@ -2,17 +2,26 @@ import ctypes
 from typing import List
 from pydantic import BaseModel, Field, validator
 from fastapi import FastAPI
+import multiprocessing
 
 lib = ctypes.CDLL('./sudoku_solver.so')
 lib.Sudoku_new.restype = ctypes.c_void_p
+lib.ParallelSolver_new.restype = ctypes.c_void_p
 lib.solve_sudokus.argtypes = (
 	ctypes.c_void_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_int)
 lib.solve_sudokus.restype = ctypes.c_void_p
 
+lib.solve_sudokus_parallel.argtypes = (
+	ctypes.c_void_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_int)
+lib.solve_sudokus_parallel.restype = ctypes.c_void_p
+
 
 class Sudoku(object):
 	def __init__(self):
-		self.obj = lib.Sudoku_new()
+
+		threads = multiprocessing.cpu_count()
+		# self.obj = lib.Sudoku_new()
+		self.obj = lib.ParallelSolver_new(threads)
 
 	def load_files(self):
 		lib.load_files(self.obj)
@@ -20,7 +29,8 @@ class Sudoku(object):
 	def solve(self, strs):
 		byte_strs = list(map(lambda s: s.encode("utf-8"), strs))
 		string_pointers = (ctypes.c_char_p * len(byte_strs))(*byte_strs)
-		lib.solve_sudokus(self.obj, string_pointers, len(strs))
+		# lib.solve_sudokus(self.obj, string_pointers, len(strs))
+		lib.solve_sudokus_parallel(self.obj, string_pointers, len(strs))
 		return list(map(lambda b: b.decode("utf-8"), byte_strs))
 
 	def free_pointer(self, p):

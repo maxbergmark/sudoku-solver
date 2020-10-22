@@ -1,7 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <bits/stdc++.h> 
-// #include <omp.h>
+#include <omp.h>
 
 #include "sudoku.h"
 
@@ -916,13 +916,49 @@ char* Sudoku::getInputChars(std::string filename, int &size) {
 
 }
 
+ParallelSolver::ParallelSolver(int n) {
+	solvers.resize(n);
+	num_threads = n;
+	for (Sudoku &s : solvers) {
+		s.connect();
+	}
+}
+
 extern "C" {
 
 	Sudoku* Sudoku_new() {
+
+
 		Sudoku* s = new Sudoku();
 		s->connect();
 		return s;
 	}
+	ParallelSolver* ParallelSolver_new(int n) {
+		omp_set_num_threads(n);
+		ParallelSolver* s = new ParallelSolver(n);
+		return s;
+	}
+
+	void solve_sudokus_parallel(ParallelSolver* solver, char** boards, int n) {
+		std::vector<std::vector<signed char>> vector_boards(n);
+		omp_set_num_threads(solver->num_threads);
+		#pragma omp parallel for schedule(dynamic, 1000)
+		for (int i = 0; i < n; i++) {
+			int tid = omp_get_thread_num();
+			Sudoku searcher = solver->solvers[tid];
+
+			vector_boards[i].resize(81);
+			for (int j = 0; j < 81; j++) {
+				vector_boards[i][j] = boards[i][j] - 49;
+			}
+			searcher.solveSudoku(vector_boards[i]);
+			std::string sol = searcher.getSolution();
+			for (int j = 0; j < 81; j++) {
+				boards[i][j] = sol[82+j];
+			}
+		}
+	}
+
 
 	void solve_sudokus(Sudoku* searcher, char** boards, int n) {
 		std::vector<std::vector<signed char>> vector_boards(n);

@@ -71,3 +71,11 @@ public:
 	static std::vector<std::vector<signed char>> getInput(std::string filename);
 	static char* getInputChars(std::string filename, int &size);
 };
+
+class ParallelSolver {
+
+public:
+	std::vector<Sudoku> solvers;
+	int num_threads;
+	ParallelSolver(int n);
+};
