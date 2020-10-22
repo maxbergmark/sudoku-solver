@@ -5,6 +5,7 @@ RUN pip install fastapi uvicorn
 EXPOSE 8080
 
 COPY ./compile_shared_lib.sh /compile_shared_lib.sh
+RUN chmod +x ./compile_shared_lib.sh
 COPY ./sudoku.h /sudoku.h
 COPY ./sudoku.cpp /sudoku.cpp
 COPY ./web_server.py /web_server.py
