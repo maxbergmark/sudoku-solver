@@ -9,7 +9,6 @@
 
 #include "sudoku.h"
 
-#define VERBOSE 0
 
 double get_wall_time() {
 	struct timeval time;
