@@ -156,7 +156,7 @@ inline void Sudoku::resetLineMask(int vIndex) {
 
 int Sudoku::placeEasy(int vIndex) {
 	int easyIndex = 0;
-	int lastPlaced = 0, tempPlaced = 0, easyplaced = 0;
+	int lastPlaced = 0, tempPlaced = 0;
 	int iter = 0;
 	if (vIndex == 0 && placedNumbers < 35) {
 		checkNakedTriples(vIndex);
@@ -641,7 +641,6 @@ void Sudoku::checkNakedTriples(int vIndex) {
 
 void Sudoku::identifyLines(int vIndex) {
 
-	int disabledLines = 0;
 	for (int i = 0; i < 3; i++) {
 		std::fill(tempRowMask[i].begin(), tempRowMask[i].end(), 0);
 		std::fill(tempColMask[i].begin(), tempColMask[i].end(), 0);
@@ -917,39 +916,32 @@ char* Sudoku::getInputChars(std::string filename, int &size) {
 
 }
 
-/*
-int main(int argc, char **argv) {
-	int n = 1;
-	if (argc == 3) {
-		n = std::atoi(argv[2]);
+extern "C" {
+
+	Sudoku* Sudoku_new() {
+		Sudoku* s = new Sudoku();
+		s->connect();
+		return s;
 	}
-	omp_set_num_threads(n);
-	std::vector<Sudoku> solvers(n);
-	std::vector<std::vector<signed char>> boards = Sudoku::getInput(argv[1]);
-	for (Sudoku &solver : solvers) {
-		solver.connect();
+
+	void solve_sudokus(Sudoku* searcher, char** boards, int n) {
+		std::vector<std::vector<signed char>> vector_boards(n);
+		for (int i = 0; i < n; i++) {
+			vector_boards[i].resize(81);
+			for (int j = 0; j < 81; j++) {
+				vector_boards[i][j] = boards[i][j] - 49;
+			}
+			searcher->solveSudoku(vector_boards[i]);
+			std::string sol = searcher->getSolution();
+			for (int j = 0; j < 81; j++) {
+				boards[i][j] = sol[82+j];
+			}
+		}
 	}
-	std::vector<std::string> res;
-	res.resize(boards.size());
-	std::cout << boards.size() << std::endl;
-	#pragma omp parallel for schedule(dynamic, 5000)
-	for (int i = 0; i < boards.size(); i++) {
-		int tid = omp_get_thread_num();
-		solvers[tid].solveSudoku(boards[i]);
-		res[i] = solvers[tid].getSolution();
-		// break;
-		// if (i == 1000) {
-			// break;
-		// }
-	}
-	for (Sudoku &solver : solvers) {
-		fprintf(stderr, "easily solved: %d / %d\n", 
-			solver.easySolved, solver.totalSolved);
-		fprintf(stderr, "guesses/board: %.2f\n", 
-			(double) solver.guesses / solver.totalSolved);
-	}
-	for (std::string s : res) {
-		// std::cout << s << std::endl;
+
+	void free_pointer(char* p) {
+		printf("freeing %p\n", p);
+		free(p);
+		printf("pointer freed\n");
 	}
 }
-*/
