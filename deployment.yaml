@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: sudoku-solver
-        image: maxbergmark/sudoku-solver
+        image: maxbergmark/sudoku-solver:arm
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
