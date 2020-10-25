@@ -2,6 +2,7 @@ import ctypes
 from typing import List, Optional
 from pydantic import BaseModel, Field, validator
 from fastapi import FastAPI, Query
+from fastapi.responses import HTMLResponse
 # import multiprocessing
 import threading
 
@@ -119,14 +120,63 @@ def solve_sudokus(input_model : SolveSudokusInput,
 	output_model = SolveSudokusOutput(solved_sudokus = res)
 	return output_model
 
-@app.get('/solve-sudoku/')
+
+def generate_table(sudoku):
+	row = """<tr>
+	    <th class="tg-5kwd">%c</th>
+	    <th class="tg-5kwd">%c</th>
+	    <th class="tg-5kwd">%c</th>
+	    <th class="tg-cly1">%c</th>
+	    <th class="tg-cly1">%c</th>
+	    <th class="tg-cly1">%c</th>
+	    <th class="tg-cly1">%c</th>
+	    <th class="tg-cly1">%c</th>
+	    <th class="tg-cly1">%c</th>
+	  </tr>
+	  """
+	s = """
+	<style type="text/css">
+	.tg  {border-collapse:collapse;border-spacing:0;}
+	.tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+	  overflow:hidden;padding:5px 5px;word-break:normal;}
+	.tg th{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+	  font-weight:normal;overflow:hidden;padding:5px 5px;word-break:normal;}
+	.tg .tg-cly1{text-align:left;vertical-align:middle}
+	.tg .tg-5kwd{border-color:inherit;font-family:"Courier New", Courier, monospace !important;;text-align:center;vertical-align:middle}
+	</style>
+	<table class="tg">
+	<thead>
+		%s
+	</thead>
+	<tbody>
+		%s
+		%s
+		%s
+		%s
+		%s
+		%s
+		%s
+		%s
+	</tbody>
+	</table>
+	"""
+	sudoku_rows = [sudoku[9*i:9*(i+1)] for i in range(9)]
+	table_rows = list(map(lambda r: row % tuple(r), sudoku_rows))
+	html_table = s % tuple(table_rows)
+	return f"<html>{html_table}</html>"
+
+@app.get('/solve-sudoku/', response_class = HTMLResponse)
 async def solve_sudoku(
-		sudoku : Optional[str] = Query(None, regex="^[0-9]{81}$")):
+		sudoku : Optional[str] = Query(None, regex="^[0-9]{81}$"),
+		json : Optional[str] = Query(None)):
 	"""
 		Solve a single sudoku, passed as a query parameter.
 	"""
 	sudokus = [sudoku]
 	res = searcher.solve(sudokus)
-	output_model = SolveSudokuOutput(solved_sudoku = res[0])
-	return output_model
+	if json:
+		output_model = SolveSudokuOutput(solved_sudoku = res[0])
+		return output_model
+	else:
+		return generate_table(res[0])
 
