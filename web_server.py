@@ -1,7 +1,7 @@
 import ctypes
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel, Field, validator
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 # import multiprocessing
 import threading
 
@@ -48,7 +48,7 @@ class Sudoku(object):
 searcher = Sudoku()
 
 
-class SolveSudokuInput(BaseModel):
+class SolveSudokusInput(BaseModel):
 	sudokus : List[str] = Field(example = [
 		("0020000090300025000061003700000000002"
 			"00400130007006040001800000760005400009007600"),
@@ -64,7 +64,7 @@ class SolveSudokuInput(BaseModel):
 			raise ValueError("Length of sudoku string must be exactly 81")
 		return v
 
-class SolveSudokuOutput(BaseModel):
+class SolveSudokusOutput(BaseModel):
 	solved_sudokus : List[str] = Field(example = [
 		("4726538191387925649561483726945312872"
 			"85479136317286945521864793763915428849327651"),
@@ -72,6 +72,25 @@ class SolveSudokuOutput(BaseModel):
 			"42873916893615427974168532385742691216359784")
 	  	],
 		description = "A list of solved sudokus.")
+
+class SolveSudokuInput(BaseModel):
+	sudoku : str = Field(
+		example = ("0020000090300025000061003700000000002"
+			"00400130007006040001800000760005400009007600"),
+		description = ("A list of unsolved sudokus.")
+	)
+
+	@validator('sudoku')
+	def check_names_not_empty(cls, v):
+		if len(v) != 81:
+			raise ValueError("Length of sudoku string must be exactly 81")
+		return v
+
+class SolveSudokuOutput(BaseModel):
+	solved_sudoku : str = Field(
+		example = ("4726538191387925649561483726945312872"
+			"85479136317286945521864793763915428849327651"),
+		description = "A solved sudokus.")
 
 
 class HelloWorldOutput(BaseModel):
@@ -88,16 +107,26 @@ def hello() -> HelloWorldOutput:
 	"""
 	return HelloWorldOutput(message = "hello, world!")
 
-@app.post('/solve-sudokus', 
-	response_model = SolveSudokuOutput)
-def solve_sudokus(input_model : SolveSudokuInput,
-		) -> SolveSudokuOutput:
+@app.post('/solve-sudokus/', 
+	response_model = SolveSudokusOutput)
+def solve_sudokus(input_model : SolveSudokusInput,
+		) -> SolveSudokusOutput:
 	"""
-		Get all memberships for a single golf club, along with statistical
-		measurements related to the players in the membership.
+		Solve a list of sudokus, passed as a json body.
 	"""
 	sudokus = input_model.sudokus
 	res = searcher.solve(sudokus)
-	output_model = SolveSudokuOutput(solved_sudokus = res)
+	output_model = SolveSudokusOutput(solved_sudokus = res)
+	return output_model
+
+@app.get('/solve-sudoku/')
+async def solve_sudoku(
+		sudoku : Optional[str] = Query(None, regex="^[0-9]{81}$")):
+	"""
+		Solve a single sudoku, passed as a query parameter.
+	"""
+	sudokus = [sudoku]
+	res = searcher.solve(sudokus)
+	output_model = SolveSudokuOutput(solved_sudoku = res[0])
 	return output_model
 
