@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM python:3.8-alpine
 
 
 EXPOSE 8080
@@ -10,6 +10,8 @@ COPY ./sudoku.h /sudoku.h
 COPY ./sudoku.cpp /sudoku.cpp
 COPY ./web_server.py /web_server.py
 
+RUN apk add build-base
+RUN pip install -U setuptools pip
 RUN pip install -r requirements.txt
 
 ENV PYTHONFAULTHANDLER=1
