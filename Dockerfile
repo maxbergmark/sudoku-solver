@@ -1,14 +1,16 @@
-FROM python:3.7
+FROM python:3.8
 
-RUN pip install fastapi uvicorn
 
 EXPOSE 8080
 
 COPY ./compile_shared_lib.sh /compile_shared_lib.sh
+COPY ./requirements.txt /requirements.txt
 RUN chmod +x ./compile_shared_lib.sh
 COPY ./sudoku.h /sudoku.h
 COPY ./sudoku.cpp /sudoku.cpp
 COPY ./web_server.py /web_server.py
+
+RUN pip install -r requirements.txt
 
 ENV PYTHONFAULTHANDLER=1
 

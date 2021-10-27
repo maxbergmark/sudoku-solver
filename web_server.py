@@ -3,6 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, validator
 from fastapi import FastAPI, Query
 from fastapi.responses import HTMLResponse
+from prometheus_fastapi_instrumentator import Instrumentator, metrics
 # import multiprocessing
 import threading
 
@@ -99,6 +100,18 @@ class HelloWorldOutput(BaseModel):
 		description = "Simple 'hello, world!' message.")
 
 app = FastAPI()
+
+instrumentator = Instrumentator(
+    should_group_status_codes=False,
+    should_ignore_untemplated=True,
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=[".*admin.*", "/metrics"],
+    inprogress_name="inprogress",
+    inprogress_labels=True,
+)
+# instrumentator = Instrumentator()
+instrumentator.instrument(app)
+instrumentator.expose(app, include_in_schema=True)
 
 @app.get('/', response_model = HelloWorldOutput)
 def hello() -> HelloWorldOutput:
